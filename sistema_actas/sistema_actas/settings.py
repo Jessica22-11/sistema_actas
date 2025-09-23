@@ -9,50 +9,64 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-import os
-from pathlib import Path
+import os #Modulo para interpretar el sistema operativo
+from decouple import config #Permite manejar variables de entorno desde .env
+from pathlib import Path #Para manejar rutas del sistema de forma segura
 
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Base del proyecto
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+%m4usd-$+m*kgxcdz8ci5gr958i85wy+i!^$!--fo9kjbv+zz'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+# Clave secreta para seguridad de Django(lee desde .env)
+SECRET_KEY = config ('SECRET_KEY', default='django-insecure-change-me-in-production')
+#Modo de depuarcion, True en desarrollo,False en produccion
+DEBUG =config('DEBUG', default=True, cast=bool) 
+#Lista de hosts permitidos para acceder al proyecto
+ALLOWED_HOSTS = config ('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split((','))])
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    #Apps de Django por defecto
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize', #Formato para numeros/fechas
+    
+    #Aplicaciones de terceros(Externas)
+    'crispy_forms',     # Formularios más amigables
+    'crispy_bootstrap5', # Integración de Crispy con Bootstrap 5
+    'ckeditor',         # Editor de texto enriquecido
+    'ckeditor_uploader',# Subida de archivos en CKEditor
+    'rest_framework',   # API con Django REST Framework
+    'corsheaders',      # Manejo de CORS
+    'import_export',    # Importación/exportación de datos en admin
     
     #Apps Propias
-    'accounts',
-    'actas',
-    'notifications',
+    'accounts',         # Gestión de usuarios
+    'actas',            # Módulo principal de actas
+    'core',             # Funcionalidades compartidas (ej. context processors)
+    'notifications',    # Sistema de notificaciones
 ]
 
 MIDDLEWARE = [
+    'corsheaders,middleware.CorsMiddleware',        # Manejo de CORS (API)
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',    # Servir archivos estáticos en producción
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',     # Protección contra CSRF
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware', # Protección contra Clickjacking
 ]
 
 ROOT_URLCONF = 'sistema_actas.urls'
@@ -60,14 +74,15 @@ ROOT_URLCONF = 'sistema_actas.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR/ 'templates'],
+        'DIRS': [BASE_DIR/ 'templates'], # Carpeta global de templates
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug'
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.notifications_count',  # Context processor personalizado
             ],
         },
     },
@@ -109,22 +124,77 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'es-CO'
+LANGUAGE_CODE = 'es-CO' #Idioma Principal
 
-TIME_ZONE = 'America/Bogota'
+TIME_ZONE = 'America/Bogota' #Zona horaria de colombia
 
-USE_I18N = True
+USE_I18N = True #Traduccion internacional
 
-USE_TZ = True
+USE_TZ = True #Manejo de zonas horarias
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT=BASE_DIR / 'staticfiles' #Para produccion
+STATICFILES_DIRS= [BASE_DIR / 'static'] #Para desarrollo
+
+MEDIA_URL='/media/' #Archivos subidos por usuarios
+MEDIA_ROOT= BASE_DIR / 'media'
 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+#Usuario Personalizado
+AUTH_USER_MODEL= 'accounts.User'
+
+#Django crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
+#CKEditor (Editor de texto enriquecido)
+CKEDITOR_UPLOAD_PATH = 'uploads/'
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'height': 400,
+        'width': '100%',
+    },
+}
+
+#Configuracion de Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = config ('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config ('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS= config ('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER= config ('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD= config ('EMAIL_HOST_PASSWORD', default='')
+
+#Celery + Redis (tareas asincronas)
+CELERY_BROKER_URL = config ('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config ('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+#OpenAI (Integracion IA)
+OPENAI_API_KEY = config ('OPENAI_API_KEY', default='')
+
+#Seguridad
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+#Sesiones
+SESSION_COOKIE_AGE = 86400 #24 horas
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+#URLs de login/logout
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = '/'
