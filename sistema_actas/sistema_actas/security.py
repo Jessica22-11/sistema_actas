@@ -20,8 +20,8 @@ class SecurityMiddleware:
             r'vbscript:',
             r'onload=',
             r'onerror=',
-            r'eval\ (',
-            r'exec\ (',
+            r'eval\s*\(',
+            r'exec\s*\(',
         ]
         
         #IPs bloqueadas temporalemnte
@@ -29,7 +29,7 @@ class SecurityMiddleware:
     
     def __call__(self, request):
         #verificar Ip bloqueada
-        if self.is_p_blocked(request):
+        if self.is_ip_blocked(request):
             logger.warning(f"Blocked Ip attempt: {self.get_client_ip(request)}")
             return HttpResponseForbidden("Access denied")
         
@@ -109,15 +109,15 @@ class SecurityMiddleware:
         ip = self.get_client_ip(request)
         key = f"rate_limit_{ip}"
         
-        #Obtener contador actual 
-        requests = cache.get (key, 0)
+        # Obtener contador actual
+        requests = cache.get(key, 0)
         
-        #Limite: 100 request por minuto
-        if request >= 100:
+        # Límite: 100 requests por minuto
+        if requests >= 100:
             return True
         
-        #Incrementar conatdor
-        cache.set(key, request +1, 60) # 60 segundos
+        # Incrementar contador
+        cache.set(key, requests + 1, 60)  # 60 segundos
         return False
 
 class AuditLogMiddleware:
