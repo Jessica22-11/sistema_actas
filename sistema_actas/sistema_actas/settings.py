@@ -58,7 +58,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders,middleware.CorsMiddleware',        # Manejo de CORS (API)
+    'corsheaders.middleware.CorsMiddleware',        # Manejo de CORS (API)
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',    # Servir archivos estáticos en producción
     'django.contrib.sessions.middleware.SessionMiddleware',
