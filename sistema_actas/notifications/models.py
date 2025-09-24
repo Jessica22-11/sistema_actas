@@ -105,7 +105,7 @@ class NotificationSettings(models.Model):
     
     class Meta:
         verbose_name = 'configuracion de Notificaciones'
-        verbose_name_prular = 'Configuraciones de Notificaciones'
+        verbose_name_plural = 'Configuraciones de Notificaciones'
         
     def __str__(self):
         return f"configuracion de {self.usuario.get_full_name()}"

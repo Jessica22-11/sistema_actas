@@ -9,7 +9,7 @@ def crear_notificacion(usuario, tipo, titulo, mensaje, enlace='', metadata=None)
     """funcion helper para crear notificaciones"""
     #verificar configuracion de notificaciones del usuario
     try:
-        user_settings = usuario.notificacion_settings
+        user_settings = usuario.notification_settings
         if not user_settings.app_todas_notificaciones:
             return None
     except NotificationSettings.DoesNotExist:
