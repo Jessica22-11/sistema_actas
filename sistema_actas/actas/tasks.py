@@ -6,7 +6,7 @@ from notifications.models import Notification
 
 
 @shared_task
-def verificar_silenio_administrativo():
+def verificar_silencio_administrativo():
     """
     Tarea que se ejecuta periódicamente para aplicar silencio administrativo
     a las actas que han superafo el tiempo límite
