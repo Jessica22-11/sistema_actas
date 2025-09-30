@@ -6,7 +6,7 @@ from datetime import timedelta
 
 User = get_user_model()
 
-class Notificacion (models.Model):
+class Notification (models.Model):
     TIPOS_NOTIFICACION =[
         ('firma_pendiente', 'Firma Pendiente'),
         ('firma_completada', 'Firma Completada'),

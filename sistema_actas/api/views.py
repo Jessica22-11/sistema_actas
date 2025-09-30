@@ -20,6 +20,7 @@ User = get_user_model()
 
 
 class ActaViewSet(viewsets.ModelViewSet):
+    queryset = Acta.objects.all()
     serializer_class = ActaSerializer
     permission_classes = [IsAuthenticated]
     
@@ -62,6 +63,7 @@ class ActaViewSet(viewsets.ModelViewSet):
 
 
 class CompromisoViewSet(viewsets.ModelViewSet):
+    queryset = Compromiso.objects.all() 
     serializer_class = CompromisoSerializer
     permission_classes = [IsAuthenticated]
     
@@ -74,6 +76,7 @@ class CompromisoViewSet(viewsets.ModelViewSet):
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
     

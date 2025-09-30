@@ -37,8 +37,6 @@ class User (AbstractUser) :
     #Validaciones personalizadas
     def clean(self):
         super().clean()
-        if self.email and not self.email.endswith('@sena.edu.co'):
-            raise ValidationError('El correo debe se del domino @sena.edu.co')
     
     #Guardado Personalizado
     def save (self, *args, **kwargs):

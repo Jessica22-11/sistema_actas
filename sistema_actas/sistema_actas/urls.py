@@ -25,9 +25,8 @@ urlpatterns = [
     path("", include("core.urls")),
     path("accounts/", include("accounts.urls")),
     path("actas/", include("actas.urls")),
-    path("compromisos/", include("compromisos.urls")),
-    path("notificaciones/", include("notificaciones.urls")),
-    path("api/", include("apy.urls")),
+    path("notifications/", include("notifications.urls")),
+    path("api/", include("api.urls")),
     path("ckeditor/", include("ckeditor_uploader.urls")),
 ]
 if settings.DEBUG:

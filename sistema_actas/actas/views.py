@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
@@ -13,7 +13,7 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 
 from .models import Acta, Participante, Firma, Compromiso
-from .utils import generar_acta_con_ia, enviar_notificacion_participantes
+from core.utils import generar_acta_con_ia, enviar_notificacion_participantes
 from notifications.models import Notification
 
 
@@ -320,9 +320,8 @@ def generar_pdf(request, acta_id):
                 ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                 ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                 ("FONTNAME", (1, 0), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 0), (-1, -1), 10)(
-                    "GRID", (0, 0), (-1, -1), colors.black
-                ),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("GRID", (0, 0), (-1, -1), colors.black),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ]
         )
@@ -448,3 +447,194 @@ def generar_pdf(request, acta_id):
 
         doc.build(story)
         return response
+
+@login_required
+def actas_list(request):
+    # Filtros
+    estado = request.GET.get('estado')
+    tipo = request.GET.get('tipo')
+    search = request.GET.get('search')
+    
+    actas = Acta.objects.filter(
+        Q(creador=request.user) | Q(participantes__usuario=request.user)
+    ).distinct()
+    
+    if estado:
+        actas = actas.filter(estado=estado)
+    if tipo:
+        actas = actas.filter(tipo_reunion=tipo)
+    if search:
+        actas = actas.filter(
+            Q(titulo__icontains=search) |
+            Q(numero_acta__icontains=search) |
+            Q(desarrollo__icontains=search)
+        )
+    
+    # Paginación
+    paginator = Paginator(actas.order_by('-fecha_creacion'), 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'estados': Acta.ESTADOS,
+        'tipos_reunion': Acta.TIPOS_REUNION,
+        'filtros': {
+            'estado': estado,
+            'tipo': tipo,
+            'search': search,
+        }
+    }
+    
+    return render(request, 'actas/list.html', context)
+
+@login_required
+def crear_acta(request):
+    if request.method == 'POST':
+        # Procesar con IA si se proporciona resumen
+        resumen = request.POST.get('resumen_reunion', '').strip()
+        
+        if resumen:
+            try:
+                contenido_ia = generar_acta_con_ia(resumen, request.user)
+                
+                acta = Acta.objects.create(
+                    titulo=request.POST.get('titulo'),
+                    tipo_reunion=request.POST.get('tipo_reunion'),
+                    fecha_reunion=request.POST.get('fecha_reunion'),
+                    lugar_reunion=request.POST.get('lugar_reunion'),
+                    modalidad=request.POST.get('modalidad'),
+                    orden_dia=contenido_ia.get('orden_dia', ''),
+                    desarrollo=contenido_ia.get('desarrollo', ''),
+                    resumen_ia=resumen,
+                    creador=request.user
+                )
+                
+                messages.success(request, 'Acta creada exitosamente con asistencia de IA.')
+                return redirect('actas:detalle', acta_id=acta.id)
+                
+            except Exception as e:
+                messages.error(request, f'Error al procesar con IA: {str(e)}')
+        else:
+            # Crear acta normal sin IA
+            acta = Acta.objects.create(
+                titulo=request.POST.get('titulo'),
+                tipo_reunion=request.POST.get('tipo_reunion'),
+                fecha_reunion=request.POST.get('fecha_reunion'),
+                lugar_reunion=request.POST.get('lugar_reunion'),
+                modalidad=request.POST.get('modalidad'),
+                orden_dia=request.POST.get('orden_dia', ''),
+                desarrollo=request.POST.get('desarrollo', ''),
+                creador=request.user
+            )
+            
+            messages.success(request, 'Acta creada exitosamente.')
+            return redirect('actas:detalle', acta_id=acta.id)
+    
+    context = {
+        'tipos_reunion': Acta.TIPOS_REUNION,
+    }
+    
+    return render(request, 'actas/crear.html', context)
+
+@login_required
+def eliminar_acta(request, acta_id):
+    acta = get_object_or_404(Acta, id=acta_id)
+    
+    # Solo el creador o un admin pueden eliminar
+    if request.user != acta.creador and not request.user.is_superuser:
+        messages.error(request, "No tienes permisos para eliminar esta acta.")
+        return redirect("actas:detalle", acta_id=acta.id)
+
+    acta.delete()
+    messages.success(request, "El acta ha sido eliminada correctamente.")
+    return redirect("actas:list")
+
+# ✅ Finalizar Acta
+@login_required
+@permission_required("actas.can_finalize_acta", raise_exception=True)
+def finalizar_acta(request, acta_id):
+    acta = get_object_or_404(Acta, id=acta_id)
+
+    if acta.estado not in ["borrador", "en_revision"]:
+        messages.warning(request, "El acta no se puede finalizar en este estado.")
+        return redirect("actas:detalle", acta_id=acta.id)
+
+    # Antes de finalizar, verificamos firmas
+    if acta.get_firmas_completadas() < acta.get_total_firmas():
+        messages.warning(request, "No se puede finalizar el acta porque aún faltan firmas.")
+        return redirect("actas:detalle", acta_id=acta.id)
+
+    acta.estado = "finalizada"
+    acta.fecha_modificacion = timezone.now()
+    acta.save()
+
+    messages.success(request, "El acta ha sido finalizada con éxito.")
+    return redirect("actas:detalle", acta_id=acta.id)
+
+# 📂 Archivar Acta
+@login_required
+@permission_required("actas.can_archive_acta", raise_exception=True)
+def archivar_acta(request, acta_id):
+    acta = get_object_or_404(Acta, id=acta_id)
+
+    if acta.estado != "finalizada":
+        messages.warning(request, "Solo las actas finalizadas se pueden archivar.")
+        return redirect("actas:detalle", acta_id=acta.id)
+
+    acta.estado = "archivada"
+    acta.fecha_modificacion = timezone.now()
+    acta.save()
+
+    messages.info(request, "El acta ha sido archivada.")
+    return redirect("actas:detalle", acta_id=acta.id)
+
+# ✍️ Firmas pendientes (solo las del usuario autenticado)
+@login_required
+def firmas_pendientes(request):
+    firmas = Firma.objects.filter(usuario=request.user, firmado=False, acta__estado="en_revision")
+
+    return render(request, "actas/firmas_pendientes.html", {
+        "firmas": firmas
+    })
+    
+@login_required
+def lista_compromisos(request, acta_id):
+    acta = get_object_or_404(Acta, id=acta_id)
+    compromisos = acta.compromisos.all()
+    return render(request, "actas/compromisos/lista.html", {"acta": acta, "compromisos": compromisos})
+
+@login_required
+def crear_compromiso(request, acta_id):
+    acta = get_object_or_404(Acta, id=acta_id)
+    if request.method == "POST":
+        descripcion = request.POST.get("descripcion")
+        responsable_id = request.POST.get("responsable")
+        fecha_limite = request.POST.get("fecha_limite")
+
+        Compromiso.objects.create(
+            acta=acta,
+            descripcion=descripcion,
+            responsable_id=responsable_id,
+            fecha_limite=fecha_limite
+        )
+        return redirect("actas:lista_compromisos", acta_id=acta.id)
+    return render(request, "actas/compromisos/form.html", {"acta": acta})
+
+@login_required
+def editar_compromiso(request, compromiso_id):
+    compromiso = get_object_or_404(Compromiso, id=compromiso_id)
+    if request.method == "POST":
+        compromiso.descripcion = request.POST.get("descripcion")
+        compromiso.fecha_limite = request.POST.get("fecha_limite")
+        compromiso.estado = request.POST.get("estado")
+        compromiso.save()
+        return redirect("actas:lista_compromisos", acta_id=compromiso.acta.id)
+    return render(request, "actas/compromisos/form.html", {"compromiso": compromiso})
+
+@login_required
+def eliminar_compromiso(request, compromiso_id):
+    compromiso = get_object_or_404(Compromiso, id=compromiso_id)
+    acta_id = compromiso.acta.id
+    compromiso.delete()
+    return redirect("actas:lista_compromisos", acta_id=acta_id)

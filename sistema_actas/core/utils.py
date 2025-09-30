@@ -1,6 +1,7 @@
 import openai
 from django.conf import settings
 from datetime import datetime
+from django.core.mail import send_mail
 
 def generar_acta_con_ia(resumen_reunion, usuario):
     """
@@ -120,3 +121,31 @@ COMPROMISOS:
             """.strip(),
             'compromisos_sugeridos': []
         }
+
+def enviar_notificacion_participantes(acta, participantes):
+    """
+    Envía un correo de notificación a los participantes de la reunión.
+    """
+    asunto = f"Notificación de Acta - {acta.titulo}"
+    mensaje = f"""
+Estimado participante,
+
+Se ha generado el acta de la reunión: {acta.titulo}
+
+Puede consultarla en el sistema.
+
+Resumen:
+{acta.resumen}
+
+Atentamente,  
+Centro Minero SENA
+    """
+
+    for participante in participantes:
+        send_mail(
+            asunto,
+            mensaje,
+            settings.DEFAULT_FROM_EMAIL,
+            [participante.email],
+            fail_silently=True
+        )

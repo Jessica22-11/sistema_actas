@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os #Modulo para interpretar el sistema operativo
-from decouple import config #Permite manejar variables de entorno desde .env
-from pathlib import Path #Para manejar rutas del sistema de forma segura
+from decouple import config#Permite manejar variables de entorno desde .env
+from pathlib import Path #Para manejanvr rutas del sistema de forma segura
 
 
 # Base del proyecto
@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize', #Formato para numeros/fechas
+    'django.contrib.humanize',
+    'django_extensions',
     
     #Aplicaciones de terceros(Externas)
     'crispy_forms',     # Formularios más amigables
@@ -273,6 +274,6 @@ LOGGING = {
 
 
 #URLs de login/logout
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = "/accounts/login/"             # Si alguien no está logueado, se manda a /login/
+LOGIN_REDIRECT_URL = "/"          # Después de login va al dashboard (raíz)
+LOGOUT_REDIRECT_URL = "/accounts/login/"   # Después de logout vuelve al login

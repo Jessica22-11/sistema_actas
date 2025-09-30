@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Mis Firmas Pendientes</h2>
+    <ul class="list-group mt-3">
+    {% for firma in firmas %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+        {{ firma.acta.numero_acta }} - {{ firma.acta.titulo }}
+        <a href="{% url 'actas:detalle' firma.acta.id %}" class="btn btn-sm btn-primary">Firmar</a>
+        </li>
+    {% empty %}
+        <li class="list-group-item">No tienes actas pendientes de firma.</li>
+    {% endfor %}
+    </ul>
+</div>
+{% endblock %}
