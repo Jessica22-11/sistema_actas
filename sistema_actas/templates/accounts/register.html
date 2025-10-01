@@ -66,6 +66,29 @@
                         <form method="post" enctype="multipart/form-data" id="registerForm">
                             {% csrf_token %}
 
+                            <!-- Mostrar errores globales -->
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- Mostrar errores de cada campo -->
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <h6 class="mb-1">Corrige los siguientes errores:</h6>
+            <ul class="mb-0">
+                {% for field, errors in form.errors.items %}
+                    <li><strong>{{ field|capfirst }}:</strong> {{ errors|join:", " }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+     {% endif %}
+
                             <!-- Paso 1 -->
                             <div class="form-step active" id="step-1">
                                 <h5 class="mb-3">Información Personal</h5>

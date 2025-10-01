@@ -158,39 +158,6 @@
         50% { transform: translateY(-20px); }
     }
 
-    .info-panel {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(5px);
-        border-radius: 15px;
-        padding: 2rem;
-        color: white;
-        margin-bottom: 2rem;
-    }
-
-    .info-panel h4 {
-        margin-bottom: 1rem;
-        font-weight: 700;
-    }
-
-    .info-panel ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .info-panel li {
-        margin-bottom: 0.5rem;
-        padding-left: 1.5rem;
-        position: relative;
-    }
-
-    .info-panel li::before {
-        content: '✓';
-        position: absolute;
-        left: 0;
-        color: #28a745;
-        font-weight: bold;
-    }
-
     @media (max-width: 768px) {
         .login-container {
             padding: 1rem;
@@ -202,10 +169,6 @@
 
         .login-header, .login-form {
             padding: 1.5rem;
-        }
-
-        .info-panel {
-            display: none;
         }
     }
 </style>
@@ -233,6 +196,23 @@
                     </div>
 
                     <div class="login-form">
+                        <!-- Errores ocultos hasta que haya un intento -->
+                        {% if form.errors %}
+                        <div id="error-box" class="alert alert-danger d-none">
+                            <strong>Corrige los siguientes errores:</strong>
+                            <ul class="mb-0">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                        <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
                         <form method="post" id="loginForm">
                             {% csrf_token %}
 
@@ -288,14 +268,21 @@
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    $('#loginForm').on('submit', function(e) {
-        const email = $('#email').val();
-        if (!(email.endsWith('@sena.edu.co') || email.endsWith('@gmail.com'))) {
-            e.preventDefault();
-            alert("Debe usar un correo válido (@sena.edu.co o @gmail.com)");
-        }
-    });
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("loginForm");
+    const errorBox = document.getElementById("error-box");
+
+    if (errorBox) {
+        // Ocultar errores al inicio
+        errorBox.classList.add("d-none");
+
+        // Mostrar errores solo después de enviar
+        form.addEventListener("submit", function() {
+            setTimeout(() => {
+                errorBox.classList.remove("d-none");
+            }, 100);
+        });
+    }
 });
 </script>
 {% endblock %}

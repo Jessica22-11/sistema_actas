@@ -9,9 +9,13 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-import os #Modulo para interpretar el sistema operativo
-from decouple import config#Permite manejar variables de entorno desde .env
-from pathlib import Path #Para manejanvr rutas del sistema de forma segura
+
+import os  # Modulo para interpretar el sistema operativo
+from decouple import config  # Permite manejar variables de entorno desde .env
+from pathlib import Path  # Para manejanvr rutas del sistema de forma segura
+
+LOGS_DIR = os.path.join("logs")
+os.makedirs(LOGS_DIR, exist_ok=True)  # crea la carpeta automáticamente si no existe
 
 
 # Base del proyecto
@@ -22,85 +26,87 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # Clave secreta para seguridad de Django(lee desde .env)
-SECRET_KEY = config ('SECRET_KEY', default='django-insecure-change-me-in-production')
-#Modo de depuarcion, True en desarrollo,False en produccion
-DEBUG =config('DEBUG', default=True, cast=bool) 
-#Lista de hosts permitidos para acceder al proyecto
-ALLOWED_HOSTS = config ('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split((','))])
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-production")
+# Modo de depuarcion, True en desarrollo,False en produccion
+DEBUG = config("DEBUG", default=True, cast=bool)
+# Lista de hosts permitidos para acceder al proyecto
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1",
+    cast=lambda v: [s.strip() for s in v.split((","))],
+)
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    #Apps de Django por defecto
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.humanize',
-    'django_extensions',
-    
-    #Aplicaciones de terceros(Externas)
-    'crispy_forms',     # Formularios más amigables
-    'crispy_bootstrap5', # Integración de Crispy con Bootstrap 5
-    'ckeditor',         # Editor de texto enriquecido
-    'ckeditor_uploader',# Subida de archivos en CKEditor
-    'rest_framework',   # API con Django REST Framework
-    'corsheaders',      # Manejo de CORS
-    'import_export',    # Importación/exportación de datos en admin
-    
-    #Apps Propias
-    'accounts',         # Gestión de usuarios
-    'actas',            # Módulo principal de actas
-    'core',             # Funcionalidades compartidas (ej. context processors)
-    'notifications',    # Sistema de notificaciones
+    # Apps de Django por defecto
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.humanize",
+    "django_extensions",
+    # Aplicaciones de terceros(Externas)
+    "crispy_forms",  # Formularios más amigables
+    "crispy_bootstrap5",  # Integración de Crispy con Bootstrap 5
+    "ckeditor",  # Editor de texto enriquecido
+    "ckeditor_uploader",  # Subida de archivos en CKEditor
+    "rest_framework",  # API con Django REST Framework
+    "corsheaders",  # Manejo de CORS
+    "import_export",  # Importación/exportación de datos en admin
+    # Apps Propias
+    "accounts",  # Gestión de usuarios
+    "actas",  # Módulo principal de actas
+    "core",  # Funcionalidades compartidas (ej. context processors)
+    "notifications",  # Sistema de notificaciones
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',        # Manejo de CORS (API)
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',    # Servir archivos estáticos en producción
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',     # Protección contra CSRF
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware', # Protección contra Clickjacking
-    'sistema_actas.security.SecurityMiddleware',
-    'sistema_actas.security.AuditLogMiddleware',
+    "corsheaders.middleware.CorsMiddleware",  # Manejo de CORS (API)
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Servir archivos estáticos en producción
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",  # Protección contra CSRF
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",  # Protección contra Clickjacking
+    "sistema_actas.security.SecurityMiddleware",
+    "sistema_actas.security.AuditLogMiddleware",
 ]
 
-ROOT_URLCONF = 'sistema_actas.urls'
+ROOT_URLCONF = "sistema_actas.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR/ 'templates'], # Carpeta global de templates
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'core.context_processors.notifications_count',  # Context processor personalizado
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],  # Carpeta global de templates
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "core.context_processors.notifications_count",  # Context processor personalizado
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'sistema_actas.wsgi.application'
+WSGI_APPLICATION = "sistema_actas.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -110,16 +116,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -127,26 +133,26 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'es-CO' #Idioma Principal
+LANGUAGE_CODE = "es-CO"  # Idioma Principal
 
-TIME_ZONE = 'America/Bogota' #Zona horaria de colombia
+TIME_ZONE = "America/Bogota"  # Zona horaria de colombia
 
-USE_I18N = True #Traduccion internacional
+USE_I18N = True  # Traduccion internacional
 
-USE_TZ = True #Manejo de zonas horarias
+USE_TZ = True  # Manejo de zonas horarias
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT=BASE_DIR / 'staticfiles' #Para produccion
-STATICFILES_DIRS= [BASE_DIR / 'static'] #Para desarrollo
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"  # Para produccion
+STATICFILES_DIRS = [BASE_DIR / "static"]  # Para desarrollo
 
-MEDIA_URL='/media/' #Archivos subidos por usuarios
-MEDIA_ROOT= BASE_DIR / 'media'
+MEDIA_URL = "/media/"  # Archivos subidos por usuarios
+MEDIA_ROOT = BASE_DIR / "media"
 
-#File upload Security
+# File upload Security
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
@@ -155,125 +161,127 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-#Usuario Personalizado
-AUTH_USER_MODEL= 'accounts.User'
+# Usuario Personalizado
+AUTH_USER_MODEL = "accounts.User"
 
-#Django crispy Forms
-CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
-CRISPY_TEMPLATE_PACK = 'bootstrap5'
+# Django crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-#CKEditor (Editor de texto enriquecido)
-CKEDITOR_UPLOAD_PATH = 'uploads/'
+# CKEditor (Editor de texto enriquecido)
+CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_CONFIGS = {
-    'default': {
-        'toolbar': 'full',
-        'height': 400,
-        'width': '100%',
+    "default": {
+        "toolbar": "full",
+        "height": 400,
+        "width": "100%",
     },
 }
 
-#Configuracion de Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config ('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config ('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS= config ('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER= config ('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD= config ('EMAIL_HOST_PASSWORD', default='')
+# Configuracion de Email
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 
-#Celery + Redis (tareas asincronas)
-CELERY_BROKER_URL = config ('CELERY_BROKER_URL', default='redis://172.25.59.213:6379/0')
-CELERY_RESULT_BACKEND = config ('CELERY_RESULT_BACKEND', default='redis://172.25.59.213:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+# Celery + Redis (tareas asincronas)
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://172.25.59.213:6379/0")
+CELERY_RESULT_BACKEND = config(
+    "CELERY_RESULT_BACKEND", default="redis://172.25.59.213:6379/0"
+)
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-#OpenAI (Integracion IA)
-OPENAI_API_KEY = config ('OPENAI_API_KEY', default='')
+# OpenAI (Integracion IA)
+OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 
-#Seguridad
+# Seguridad
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
+X_FRAME_OPTIONS = "DENY"
 
-#Rate limiting
+# Rate limiting
 RATELIMIT_ENABLE = True
-RATELIMIT_USE_CACHE = 'default'
+RATELIMIT_USE_CACHE = "default"
 
-#Backup Settings
-BACKUP_LOCAL_DIRECTORY = BASE_DIR / 'backups'
+# Backup Settings
+BACKUP_LOCAL_DIRECTORY = BASE_DIR / "backups"
 BACKUP_KEEP_DAYS = 30
 
-#Sesiones
-SESSION_COOKIE_AGE = 86400 #24 horas
+# Sesiones
+SESSION_COOKIE_AGE = 86400  # 24 horas
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-#CSRF Protection
+# CSRF Protection
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_TRUSTED_ORIGIN = ['https://localhost:8000', 'http://127.0.0.1:8000']
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_TRUSTED_ORIGIN = ["https://localhost:8000", "http://127.0.0.1:8000"]
 
-#Logging
+# Logging
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
         },
-        'json': {
-            'format': '{"level": "%(levelname)s", "time": "%(asctime)s", "module": "%(module)s", "message": "%(message)s"}',
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/django.log',
-            'formatter': 'verbose',
-        },
-        'security_file': {
-            'level': 'WARNING',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/security.log',
-            'formatter': 'json',
-        },
-        'audit_file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/audit.log',
-            'formatter': 'json',
+        "json": {
+            "format": '{"level": "%(levelname)s", "time": "%(asctime)s", "module": "%(module)s", "message": "%(message)s"}',
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True,
+    "handlers": {
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(LOGS_DIR, "audit.log"),
+            "formatter": "verbose",
         },
-        'security': {
-            'handlers': ['security_file'],
-            'level': 'WARNING',
-            'propagate': False,
+        "security_file": {
+            "level": "WARNING",
+            "class": "logging.FileHandler",
+            "filename": BASE_DIR / "logs/security.log",
+            "formatter": "json",
         },
-        'audit': {
-            'handlers': ['audit_file'],
-            'level': 'INFO',
-            'propagate': False,
+        "audit_file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": BASE_DIR / "logs/audit.log",
+            "formatter": "json",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["file"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "security": {
+            "handlers": ["security_file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "audit": {
+            "handlers": ["audit_file"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
 
 
-#URLs de login/logout
-LOGIN_URL = "/accounts/login/"             # Si alguien no está logueado, se manda a /login/
-LOGIN_REDIRECT_URL = "/"          # Después de login va al dashboard (raíz)
-LOGOUT_REDIRECT_URL = "/accounts/login/"   # Después de logout vuelve al login
+# URLs de login/logout
+LOGIN_URL = "/accounts/login/"  # Si alguien no está logueado, se manda a /login/
+LOGIN_REDIRECT_URL = "/"  # Después de login va al dashboard (raíz)
+LOGOUT_REDIRECT_URL = "/accounts/login/"  # Después de logout vuelve al login
