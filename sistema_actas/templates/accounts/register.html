@@ -13,22 +13,101 @@
         margin-bottom: 2rem;
         padding: 0 2rem;
     }
-    .step { flex: 1; text-align: center; position: relative; padding: 0 1rem; }
+
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        padding: 0 1rem;
+    }
+
     .step:not(:last-child)::after {
-        content: ''; position: absolute; top: 15px; right: -50%; width: 100%; height: 2px;
-        background: #e9ecef; z-index: 1;
+        content: '';
+        position: absolute;
+        top: 15px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 1;
     }
-    .step.completed:not(:last-child)::after { background: var(--sena-green); }
+
+    .step.completed:not(:last-child)::after {
+        background: var(--sena-green);
+    }
+
     .step-number {
-        width: 30px; height: 30px; border-radius: 50%; background: #e9ecef; color: #6c757d;
-        display: inline-flex; align-items: center; justify-content: center; font-weight: 600;
-        margin-bottom: 0.5rem; position: relative; z-index: 2; transition: all 0.3s ease;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #e9ecef;
+        color: #6c757d;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 2;
+        transition: all 0.3s ease;
     }
-    .step.active .step-number,
-    .step.completed .step-number { background: var(--sena-green); color: white; }
-    .form-step { display: none; }
-    .form-step.active { display: block; animation: fadeInRight 0.5s ease-out; }
-    @keyframes fadeInRight { from { opacity:0; transform:translateX(20px);} to {opacity:1; transform:translateX(0);} }
+
+    .step.active .step-number {
+        background: var(--sena-green);
+        color: white;
+    }
+
+    .step.completed .step-number {
+        background: var(--sena-green);
+        color: white;
+    }
+
+    .signature-upload {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .signature-upload:hover {
+        border-color: var(--sena-green);
+        background: rgba(57, 169, 0, 0.05);
+    }
+
+    .signature-upload.dragover {
+        border-color: var(--sena-green);
+        background: rgba(57, 169, 0, 0.1);
+    }
+
+    .signature-preview {
+        max-width: 300px;
+        max-height: 150px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        margin-top: 1rem;
+    }
+
+    .form-step {
+        display: none;
+    }
+
+    .form-step.active {
+        display: block;
+        animation: fadeInRight 0.5s ease-out;
+    }
+
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -36,7 +115,7 @@
 <div class="login-container d-flex align-items-center">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-lg-6 col-md-8">
+            <div class="col-lg-8 col-md-10">
                 <div class="login-card">
                     <div class="login-header">
                         <div class="sena-logo">
@@ -47,90 +126,195 @@
                     </div>
 
                     <div class="login-form">
-                        <!-- Pasos -->
+                        <!-- Indicador de pasos -->
                         <div class="register-steps">
                             <div class="step active" data-step="1">
-                                <div class="step-number">1</div><small>Información</small>
+                                <div class="step-number">1</div>
+                                <small>Información</small>
                             </div>
                             <div class="step" data-step="2">
-                                <div class="step-number">2</div><small>Credenciales</small>
+                                <div class="step-number">2</div>
+                                <small>Credenciales</small>
                             </div>
                             <div class="step" data-step="3">
-                                <div class="step-number">3</div><small>Firma</small>
+                                <div class="step-number">3</div>
+                                <small>Firma Digital</small>
                             </div>
                             <div class="step" data-step="4">
-                                <div class="step-number">4</div><small>Confirmación</small>
+                                <div class="step-number">4</div>
+                                <small>Confirmación</small>
                             </div>
                         </div>
 
                         <form method="post" enctype="multipart/form-data" id="registerForm">
                             {% csrf_token %}
-
-                            <!-- Paso 1 -->
+                            
+                            <!-- Paso 1: Información Personal -->
                             <div class="form-step active" id="step-1">
                                 <h5 class="mb-3">Información Personal</h5>
+                                
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">{{ form.first_name|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ form.last_name|as_crispy_field }}</div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating mb-3">
+                                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                            <label for="first_name">Nombres</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating mb-3">
+                                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                            <label for="last_name">Apellidos</label>
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">{{ form.rol|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ form.telefono|as_crispy_field }}</div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating mb-3">
+                                            <select class="form-select" id="rol" name="rol" required>
+                                                <option value="">Seleccione su rol</option>
+                                                <option value="funcionario">Funcionario</option>
+                                                <option value="coordinador">Coordinador</option>
+                                                <option value="director">Director</option>
+                                            </select>
+                                            <label for="rol">Rol en el Centro</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating mb-3">
+                                            <input type="tel" class="form-control" id="telefono" name="telefono">
+                                            <label for="telefono">Teléfono (opcional)</label>
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div class="d-flex justify-content-end">
-                                    <button type="button" class="btn btn-primary" onclick="nextStep(1)">Siguiente</button>
+                                    <button type="button" class="btn btn-primary" onclick="nextStep(1)">
+                                        Siguiente <i class="fas fa-arrow-right ms-1"></i>
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Paso 2 -->
+                            <!-- Paso 2: Credenciales -->
                             <div class="form-step" id="step-2">
                                 <h5 class="mb-3">Credenciales de Acceso</h5>
-                                <div class="mb-3">{{ form.email|as_crispy_field }}</div>
-                                <div class="mb-3">{{ form.username|as_crispy_field }}</div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">{{ form.password1|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ form.password2|as_crispy_field }}</div>
+                                
+                                <div class="form-floating mb-3">
+                                    <input type="email" class="form-control email-sena" id="email" name="email" 
+                                            pattern=".*@sena\.edu\.co$" required>
+                                    <label for="email">Correo Institucional</label>
+                                    <div class="form-text">Debe ser un correo @sena.edu.co</div>
                                 </div>
+
+                                <div class="form-floating mb-3">
+                                    <input type="text" class="form-control" id="username" name="username" readonly>
+                                    <label for="username">Nombre de Usuario</label>
+                                    <div class="form-text">Se generará automáticamente desde su email</div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-floating mb-3">
+                                            <input type="password" class="form-control" id="password1" name="password1" required>
+                                            <label for="password1">Contraseña</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating mb-3">
+                                            <input type="password" class="form-control" id="password2" name="password2" required>
+                                            <label for="password2">Confirmar Contraseña</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="password-strength" id="password-strength">
+                                    <!-- Se llenará dinámicamente -->
+                                </div>
+
                                 <div class="d-flex justify-content-between">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(2)">Anterior</button>
-                                    <button type="button" class="btn btn-primary" onclick="nextStep(2)">Siguiente</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(2)">
+                                        <i class="fas fa-arrow-left me-1"></i> Anterior
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="nextStep(2)">
+                                        Siguiente <i class="fas fa-arrow-right ms-1"></i>
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Paso 3 -->
+                            <!-- Paso 3: Firma Digital -->
                             <div class="form-step" id="step-3">
                                 <h5 class="mb-3">Firma Digital</h5>
-                                <div class="mb-3">{{ form.firma_digital|as_crispy_field }}</div>
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Opcional: Puede agregar su firma ahora o más tarde desde su perfil.
+                                <p class="text-muted mb-4">Suba su firma digital para uso en las actas</p>
+
+                                <div class="signature-upload" id="signature-upload">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                    <h6>Arrastra tu firma aquí o haz clic para seleccionar</h6>
+                                    <p class="text-muted mb-0">Formatos: PNG, JPG, GIF (máx. 2MB)</p>
+                                    <input type="file" class="d-none" id="firma_digital" name="firma_digital" 
+                                            accept="image/*">
                                 </div>
+
+                                <div id="signature-preview" class="text-center" style="display: none;">
+                                    <img id="preview-image" class="signature-preview" alt="Vista previa de firma">
+                                    <br>
+                                    <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="removeSignature()">
+                                        <i class="fas fa-trash me-1"></i>Eliminar
+                                    </button>
+                                </div>
+
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Opcional:</strong> Puede agregar su firma digital ahora o hacerlo más tarde desde su perfil.
+                                </div>
+
                                 <div class="d-flex justify-content-between">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(3)">Anterior</button>
-                                    <button type="button" class="btn btn-primary" onclick="nextStep(3)">Siguiente</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(3)">
+                                        <i class="fas fa-arrow-left me-1"></i> Anterior
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="nextStep(3)">
+                                        Siguiente <i class="fas fa-arrow-right ms-1"></i>
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Paso 4 -->
+                            <!-- Paso 4: Confirmación -->
                             <div class="form-step" id="step-4">
-                                <h5 class="mb-3">Confirmación</h5>
-                                <div class="card mb-3"><div class="card-body" id="confirmation-data"></div></div>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="terms" required>
+                                <h5 class="mb-3">Confirmación de Datos</h5>
+                                
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div id="confirmation-data">
+                                            <!-- Se llenará dinámicamente -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-check mt-3">
+                                    <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
                                     <label class="form-check-label" for="terms">
-                                        Acepto los términos y condiciones.
+                                        Acepto los términos y condiciones y autorizo el tratamiento de mis datos personales 
+                                        de acuerdo con la <a href="#" target="_blank">Política de Privacidad del SENA</a>
                                     </label>
                                 </div>
-                                <div class="d-flex justify-content-between">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(4)">Anterior</button>
-                                    <button type="submit" class="btn btn-success"><i class="fas fa-user-check me-2"></i>Crear Cuenta</button>
+
+                                <div class="d-flex justify-content-between mt-4">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(4)">
+                                        <i class="fas fa-arrow-left me-1"></i> Anterior
+                                    </button>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-user-check me-2"></i>
+                                        Crear Cuenta
+                                    </button>
                                 </div>
                             </div>
                         </form>
 
                         <div class="text-center mt-4">
-                            <small class="text-muted">¿Ya tienes cuenta?
-                                <a href="{% url 'accounts:login' %}">Inicia sesión</a>
+                            <small class="text-muted">
+                                ¿Ya tienes cuenta? 
+                                <a href="{% url 'accounts:login' %}" class="text-decoration-none">
+                                    Iniciar sesión
+                                </a>
                             </small>
                         </div>
                     </div>
@@ -143,48 +327,248 @@
 
 {% block extra_js %}
 <script>
-let currentStep = 1, totalSteps = 4;
+let currentStep = 1;
+const totalSteps = 4;
 
 function nextStep(step) {
-    if (validateStep(step)) showStep(step + 1);
-}
-function prevStep(step) { if (step > 1) showStep(step - 1); }
-function showStep(step) {
-    $(".form-step").removeClass("active"); $(".step").removeClass("active completed");
-    $(`#step-${step}`).addClass("active"); $(`.step[data-step="${step}"]`).addClass("active");
-    for (let i=1; i<step; i++) $(`.step[data-step="${i}"]`).addClass("completed");
-    currentStep = step;
-    if (step === 4) generateConfirmation();
-}
-function validateStep(step) {
-    let valid = true, $s = $(`#step-${step}`);
-    $s.find("input[required], select[required]").each(function() {
-        if (!$(this).val().trim()) { $(this).addClass("is-invalid"); valid=false; }
-        else $(this).removeClass("is-invalid");
-    });
-    if (step === 2) {
-        const email = $("#id_email").val();
-        if (!(email.endsWith("@sena.edu.co") || email.endsWith("@gmail.com"))) {
-            $("#id_email").addClass("is-invalid"); valid=false;
-            alert("El correo debe ser @sena.edu.co o @gmail.com");
-        }
-        if ($("#id_password1").val() !== $("#id_password2").val()) {
-            $("#id_password2").addClass("is-invalid"); valid=false;
-            alert("Las contraseñas no coinciden");
+    if (validateStep(step)) {
+        if (step < totalSteps) {
+            showStep(step + 1);
         }
     }
+}
+
+function prevStep(step) {
+    if (step > 1) {
+        showStep(step - 1);
+    }
+}
+
+function showStep(step) {
+    // Ocultar todos los pasos
+    $('.form-step').removeClass('active');
+    $('.step').removeClass('active completed');
+    
+    // Mostrar paso actual
+    $(`#step-${step}`).addClass('active');
+    $(`.step[data-step="${step}"]`).addClass('active');
+    
+    // Marcar pasos completados
+    for (let i = 1; i < step; i++) {
+        $(`.step[data-step="${i}"]`).addClass('completed');
+    }
+    
+    currentStep = step;
+    
+    // Generar confirmación en el último paso
+    if (step === 4) {
+        generateConfirmation();
+    }
+}
+
+function validateStep(step) {
+    let valid = true;
+    const $currentStep = $(`#step-${step}`);
+    
+    // Validar campos requeridos del paso actual
+    $currentStep.find('input[required], select[required]').each(function() {
+        if (!$(this).val().trim()) {
+            $(this).addClass('is-invalid');
+            valid = false;
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+    
+    // Validaciones específicas por paso
+    switch(step) {
+        case 2:
+            // Validar email SENA
+            const email = $('#email').val();
+            if (!email.endsWith('@sena.edu.co')) {
+                $('#email').addClass('is-invalid');
+                valid = false;
+            }
+            
+            // Validar contraseñas coinciden
+            if ($('#password1').val() !== $('#password2').val()) {
+                $('#password2').addClass('is-invalid');
+                showAlert('Las contraseñas no coinciden', 'error');
+                valid = false;
+            }
+            break;
+    }
+    
+    if (!valid) {
+        showAlert('Por favor complete todos los campos requeridos', 'warning');
+    }
+    
     return valid;
 }
+
 function generateConfirmation() {
-    let data = {
-        "Nombre": $("#id_first_name").val() + " " + $("#id_last_name").val(),
-        "Email": $("#id_email").val(),
-        "Rol": $("#id_rol option:selected").text(),
-        "Teléfono": $("#id_telefono").val() || "No especificado",
-        "Firma Digital": $("#id_firma_digital").val() ? "Cargada" : "No cargada"
+    const data = {
+        'Nombres': $('#first_name').val() + ' ' + $('#last_name').val(),
+        'Email': $('#email').val(),
+        'Rol': $('#rol option:selected').text(),
+        'Teléfono': $('#telefono').val() || 'No especificado',
+        'Firma Digital': $('#firma_digital')[0].files.length > 0 ? 'Cargada' : 'No cargada'
     };
-    let html=""; for (const [k,v] of Object.entries(data)) html += `<div><strong>${k}:</strong> ${v}</div>`;
-    $("#confirmation-data").html(html);
+    
+    let html = '';
+    for (const [key, value] of Object.entries(data)) {
+        html += `
+            <div class="row mb-2">
+                <div class="col-4 fw-semibold">${key}:</div>
+                <div class="col-8">${value}</div>
+            </div>
+        `;
+    }
+    
+    $('#confirmation-data').html(html);
+}
+
+// Event listeners
+$(document).ready(function() {
+    // Auto-generar username desde email
+    $('#email').on('input', function() {
+        const email = $(this).val();
+        const username = email.split('@')[0];
+        $('#username').val(username);
+        
+        // Validar email SENA
+        if (email && !email.endsWith('@sena.edu.co')) {
+            $(this).addClass('is-invalid');
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+    
+    // Validación de fortaleza de contraseña
+    $('#password1').on('input', function() {
+        const password = $(this).val();
+        updatePasswordStrength(password);
+    });
+    
+    // Validación de confirmación de contraseña
+    $('#password2').on('input', function() {
+        const password1 = $('#password1').val();
+        const password2 = $(this).val();
+        
+        if (password2 && password1 !== password2) {
+            $(this).addClass('is-invalid');
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+    
+    // Manejo de carga de firma
+    $('#signature-upload').on('click', function() {
+        $('#firma_digital').click();
+    });
+    
+    $('#firma_digital').on('change', function(e) {
+        handleSignatureUpload(e.target.files[0]);
+    });
+    
+    // Drag & Drop para firma
+    $('#signature-upload')
+        .on('dragover', function(e) {
+            e.preventDefault();
+            $(this).addClass('dragover');
+        })
+        .on('dragleave', function(e) {
+            e.preventDefault();
+            $(this).removeClass('dragover');
+        })
+        .on('drop', function(e) {
+            e.preventDefault();
+            $(this).removeClass('dragover');
+            const files = e.originalEvent.dataTransfer.files;
+            if (files.length > 0) {
+                handleSignatureUpload(files[0]);
+            }
+        });
+});
+
+function updatePasswordStrength(password) {
+    const strength = {
+        0: {text: 'Muy débil', class: 'danger', width: '20%'},
+        1: {text: 'Débil', class: 'warning', width: '40%'},
+        2: {text: 'Regular', class: 'info', width: '60%'},
+        3: {text: 'Fuerte', class: 'success', width: '80%'},
+        4: {text: 'Muy fuerte', class: 'success', width: '100%'}
+    };
+    
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    
+    const level = Math.min(score, 4);
+    const info = strength[level];
+    
+    $('#password-strength').html(`
+        <div class="progress" style="height: 8px;">
+            <div class="progress-bar bg-${info.class}" style="width: ${info.width}"></div>
+        </div>
+        <small class="text-${info.class}">${info.text}</small>
+    `);
+}
+
+function handleSignatureUpload(file) {
+    if (!file) return;
+    
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+        showAlert('Solo se permiten archivos de imagen', 'error');
+        return;
+    }
+    
+    // Validar tamaño (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        showAlert('El archivo no puede superar 2MB', 'error');
+        return;
+    }
+    
+    // Mostrar preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        $('#preview-image').attr('src', e.target.result);
+        $('#signature-upload').hide();
+        $('#signature-preview').show();
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeSignature() {
+    $('#firma_digital').val('');
+    $('#signature-upload').show();
+    $('#signature-preview').hide();
+}
+
+function showAlert(message, type) {
+    const alertClass = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'warning': 'alert-warning',
+        'info': 'alert-info'
+    }[type] || 'alert-info';
+    
+    const alert = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('.login-form').prepend(alert);
+    
+    setTimeout(() => {
+        alert.fadeOut();
+    }, 5000);
 }
 </script>
 {% endblock %}

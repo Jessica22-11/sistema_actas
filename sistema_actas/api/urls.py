@@ -11,7 +11,7 @@ router.register(r'notifications', views.NotificationViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('dashboard/stats/', views.dashboard_stats, name='dashboard-stats'),
+    path('dashboard/stats/', views.dashboard_stats, name='dashboard_stats'),
     path('actas/<int:acta_id>/firmas/', views.acta_firmas_status, name='acta_firmas'),
     path('users/search/', views.search_users, name='search_users'),
     path('export/actas/', views.export_actas, name='export_actas'),

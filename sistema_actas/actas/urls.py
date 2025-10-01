@@ -6,7 +6,7 @@ from . import views
 app_name = "actas"
 
 urlpatterns = [
-    path("", views.actas_list, name="list"),
+    path("", views.actas_list, name="actas_list"),
     path("crear/", views.crear_acta, name="crear"),
     path("<int:acta_id>/", views.detalle_acta, name="detalle"),
     path("<int:acta_id>/editar/", views.editar_acta, name="editar"),
@@ -23,6 +23,7 @@ urlpatterns = [
     
     # Rutas de compromisos
     path("<int:acta_id>/compromisos/", views.lista_compromisos, name="lista_compromisos"),
+    path("compromisos/", views.mis_compromisos, name="mis_compromisos"),
     path("<int:acta_id>/compromisos/nuevo/", views.crear_compromiso, name="crear_compromiso"),
     path("compromisos/<int:compromiso_id>/editar/", views.editar_compromiso, name="editar_compromiso"),
     path("compromisos/<int:compromiso_id>/eliminar/", views.eliminar_compromiso, name="eliminar_compromiso"),

@@ -213,6 +213,7 @@
 
 {% block content %}
 <div class="login-container d-flex align-items-center">
+    <!-- Formas flotantes decorativas -->
     <div class="floating-shapes">
         <div class="shape"></div>
         <div class="shape"></div>
@@ -221,6 +222,33 @@
 
     <div class="container">
         <div class="row justify-content-center">
+            <!-- Panel informativo -->
+            <div class="col-lg-4 d-none d-lg-block">
+                <div class="info-panel">
+                    <h4>
+                        <i class="fas fa-file-alt me-2"></i>
+                        Sistema de Actas
+                    </h4>
+                    <p>Transformación digital para la gestión de actas institucionales del Centro Minero SENA.</p>
+                    
+                    <h6>Características:</h6>
+                    <ul>
+                        <li>Procesamiento con Inteligencia Artificial</li>
+                        <li>Firmas digitales seguras</li>
+                        <li>Seguimiento de compromisos</li>
+                        <li>Notificaciones automáticas</li>
+                        <li>Generación de reportes PDF</li>
+                        <li>Silencio administrativo</li>
+                    </ul>
+
+                    <div class="mt-4 p-3 bg-warning bg-opacity-25 rounded">
+                        <h6><i class="fas fa-info-circle me-1"></i> Importante</h6>
+                        <small>Solo funcionarios con email @sena.edu.co pueden acceder al sistema.</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario de login -->
             <div class="col-lg-5 col-md-8 col-sm-10">
                 <div class="login-card">
                     <div class="login-header">
@@ -233,38 +261,55 @@
                     </div>
 
                     <div class="login-form">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
                         <form method="post" id="loginForm">
                             {% csrf_token %}
-
-                            <div class="form-floating">
-                                <input type="email" 
-                                    class="form-control" 
-                                    id="email" 
-                                    name="username" 
-                                    placeholder="usuario@sena.edu.co"
-                                    required>
+                            
+                            <div class="form-floating mb-3">
+                                {{ form.username }}
                                 <label for="email">
                                     <i class="fas fa-envelope me-1"></i>
-                                    Correo Institucional o Gmail
+                                    Correo Institucional
                                 </label>
+                                <div class="invalid-feedback">
+                                    Por favor ingrese un correo @sena.edu.co válido
+                                </div>
                             </div>
 
-                            <div class="form-floating">
-                                <input type="password" 
-                                    class="form-control" 
-                                    id="password" 
-                                    name="password" 
-                                    placeholder="Contraseña"
-                                    required>
-                                <label for="password">
-                                    <i class="fas fa-lock me-1"></i>
-                                    Contraseña
+                            <div class="form-floating mb-3 position-relative">
+                        {{ form.password }}
+                        <label for="password">
+                            <i class="fas fa-lock me-1"></i>
+                            Contraseña
+                        </label>
+                        <div class="password-toggle" 
+                            style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d;">
+                            <i class="fas fa-eye" id="togglePassword"></i>
+                        </div>
+                    </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                <label class="form-check-label" for="remember">
+                                    Recordar sesión
                                 </label>
                             </div>
 
                             <button type="submit" class="btn btn-primary btn-login w-100">
-                                <i class="fas fa-sign-in-alt me-2"></i>
-                                Iniciar Sesión
+                                <span class="login-text">
+                                    <i class="fas fa-sign-in-alt me-2"></i>
+                                    Iniciar Sesión
+                                </span>
+                                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
                             </button>
                         </form>
 
@@ -275,10 +320,18 @@
                         <div class="register-link">
                             <a href="{% url 'accounts:register' %}">
                                 <i class="fas fa-user-plus me-1"></i>
-                                Registrarse
+                                Registrarse como funcionario SENA
                             </a>
                         </div>
                     </div>
+                </div>
+
+                <!-- Información adicional móvil -->
+                <div class="text-center mt-3 d-lg-none">
+                    <small class="text-white-50">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Conexión segura y cifrada
+                    </small>
                 </div>
             </div>
         </div>
@@ -289,12 +342,60 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    // Toggle password visibility
+    $('#togglePassword').click(function() {
+        const password = $('#password');
+        const type = password.attr('type') === 'password' ? 'text' : 'password';
+        password.attr('type', type);
+        $(this).toggleClass('fa-eye fa-eye-slash');
+    });
+
+    // Validación en tiempo real del email (SENA o Gmail)
+    $('#email').on('input', function() {
+        const email = $(this).val();
+        const isValid = (
+            email.endsWith('@sena.edu.co') || email.endsWith('@gmail.com')
+        );
+
+        if (email.length > 0) {
+            if (isValid) {
+                $(this).removeClass('is-invalid').addClass('is-valid');
+            } else {
+                $(this).removeClass('is-valid').addClass('is-invalid');
+            }
+        } else {
+            $(this).removeClass('is-valid is-invalid');
+        }
+    });
+
+    // Manejo del formulario con loading state
     $('#loginForm').on('submit', function(e) {
+        const $form = $(this);
+        const $button = $form.find('button[type="submit"]');
+        const $spinner = $button.find('.spinner-border');
+        const $text = $button.find('.login-text');
+
+        // Validar email antes de enviar
         const email = $('#email').val();
         if (!(email.endsWith('@sena.edu.co') || email.endsWith('@gmail.com'))) {
             e.preventDefault();
-            alert("Debe usar un correo válido (@sena.edu.co o @gmail.com)");
+            $('#email').addClass('is-invalid');
+            return false;
         }
+
+        // Mostrar loading state
+        $button.prop('disabled', true);
+        $text.addClass('d-none');
+        $spinner.removeClass('d-none');
+
+        return true;
+    });
+
+    // Efectos visuales en los campos
+    $('.form-control').on('focus', function() {
+        $(this).parent().addClass('focused');
+    }).on('blur', function() {
+        $(this).parent().removeClass('focused');
     });
 });
 </script>

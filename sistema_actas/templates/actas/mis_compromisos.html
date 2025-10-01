@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Mis Compromisos</h2>
+    <ul class="list-group">
+        {% for compromiso in compromisos %}
+            <li class="list-group-item">{{ compromiso.descripcion }}</li>
+        {% empty %}
+            <li class="list-group-item">No tienes compromisos registrados.</li>
+        {% endfor %}
+    </ul>
+</div>

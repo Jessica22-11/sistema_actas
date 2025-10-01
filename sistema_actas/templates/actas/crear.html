@@ -190,7 +190,7 @@
                     <p class="text-muted">Crea una nueva acta de reunión con asistencia de IA</p>
                 </div>
                 <div>
-                    <a href="{% url 'actas:list' %}" class="btn btn-outline-secondary">
+                    <a href="{% url 'actas:actas_list' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i>Volver a Lista
                     </a>
                 </div>
@@ -243,7 +243,7 @@
                                 <div class="col-md-6 mb-3">
                                     <div class="form-floating">
                                         <input type="text" class="form-control" id="titulo" name="titulo" 
-                                               placeholder="Título del acta" required>
+                                                placeholder="Título del acta" required>
                                         <label for="titulo">Título del Acta</label>
                                     </div>
                                 </div>
@@ -264,14 +264,14 @@
                                 <div class="col-md-4 mb-3">
                                     <div class="form-floating">
                                         <input type="datetime-local" class="form-control" id="fecha_reunion" 
-                                               name="fecha_reunion" required>
+                                                name="fecha_reunion" required>
                                         <label for="fecha_reunion">Fecha y Hora</label>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <div class="form-floating">
                                         <input type="text" class="form-control" id="lugar_reunion" 
-                                               name="lugar_reunion" placeholder="Lugar de la reunión" required>
+                                                xname="lugar_reunion" placeholder="Lugar de la reunión" required>
                                         <label for="lugar_reunion">Lugar</label>
                                     </div>
                                 </div>
@@ -323,7 +323,7 @@
                                 <p class="text-muted">Analizando contenido y generando acta estructurada...</p>
                                 <div class="progress" style="width: 300px; margin: 0 auto;">
                                     <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                         style="width: 100%"></div>
+                                            style="width: 100%"></div>
                                 </div>
                             </div>
 
@@ -335,7 +335,7 @@
                                         Resumen de la Reunión
                                     </label>
                                     <textarea class="form-control" id="resumen_reunion" name="resumen_reunion" 
-                                              rows="6" placeholder="Describa brevemente los temas tratados en la reunión, decisiones tomadas, participantes principales, etc. 
+                                                rows="6" placeholder="Describa brevemente los temas tratados en la reunión, decisiones tomadas, participantes principales, etc. 
 
 Ejemplo:
 - Se discutió el presupuesto 2024 del programa de minería
@@ -398,12 +398,12 @@ Ejemplo:
                                         <div class="col-md-6">
                                             <label class="form-label">Email del Participante</label>
                                             <input type="email" name="participantes" class="form-control" 
-                                                   value="{{ user.email }}" readonly>
+                                                    value="{{ user.email }}" readonly>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Rol en la Reunión</label>
                                             <input type="text" class="form-control" 
-                                                   value="Creador del Acta" readonly>
+                                                    value="Creador del Acta" readonly>
                                         </div>
                                     </div>
                                 </div>
@@ -447,25 +447,25 @@ Ejemplo:
                             <div class="mb-3">
                                 <label for="orden_dia" class="form-label">Orden del Día</label>
                                 <textarea class="form-control" id="orden_dia" name="orden_dia" rows="4"
-                                          placeholder="1. Verificación del quórum&#10;2. Lectura y aprobación del orden del día&#10;3. [Agregar puntos específicos]&#10;4. Compromisos y acuerdos&#10;5. Varios"></textarea>
+                                            placeholder="1. Verificación del quórum&#10;2. Lectura y aprobación del orden del día&#10;3. [Agregar puntos específicos]&#10;4. Compromisos y acuerdos&#10;5. Varios"></textarea>
                             </div>
 
                             <div class="mb-3">
                                 <label for="desarrollo" class="form-label">Desarrollo de la Reunión</label>
                                 <textarea class="form-control" id="desarrollo" name="desarrollo" rows="8"
-                                          placeholder="Describa detalladamente el desarrollo de la reunión..."></textarea>
+                                            placeholder="Describa detalladamente el desarrollo de la reunión..."></textarea>
                             </div>
 
                             <div class="mb-3">
                                 <label for="observaciones" class="form-label">Observaciones</label>
                                 <textarea class="form-control" id="observaciones" name="observaciones" rows="3"
-                                          placeholder="Observaciones adicionales (opcional)"></textarea>
+                                            placeholder="Observaciones adicionales (opcional)"></textarea>
                             </div>
 
                             <div class="mb-3">
                                 <label for="archivo_adjunto" class="form-label">Archivo Adjunto</label>
                                 <input type="file" class="form-control" id="archivo_adjunto" name="archivo_adjunto"
-                                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
                                 <div class="form-text">Formatos soportados: PDF, Word, Excel, PowerPoint</div>
                             </div>
                         </div>

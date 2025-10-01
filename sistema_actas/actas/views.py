@@ -486,7 +486,7 @@ def actas_list(request):
         }
     }
     
-    return render(request, 'actas/list.html', context)
+    return render(request, 'actas/actas_list.html', context)
 
 @login_required
 def crear_acta(request):
@@ -638,3 +638,7 @@ def eliminar_compromiso(request, compromiso_id):
     acta_id = compromiso.acta.id
     compromiso.delete()
     return redirect("actas:lista_compromisos", acta_id=acta_id)
+
+def mis_compromisos(request):
+    compromisos = Compromiso.objects.all()  # luego lo puedes filtrar por usuario
+    return render(request, "actas/mis_compromisos.html", {"compromisos": compromisos})

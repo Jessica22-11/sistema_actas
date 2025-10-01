@@ -12,7 +12,7 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
             messages.success(request, f"Bienvenido {user.get_full_name()}")
-            return redirect("dashboard")  # Redirige a tu panel principal
+            return redirect("core:dashboard")  # Redirige a tu panel principal
         else:
             messages.error(request, "Correo o contraseña incorrectos")
     else:
@@ -25,12 +25,10 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(commit=False)
-            user.username = user.email  # ⚡ Usa el email como username
             user.save()
             messages.success(request, "✅ Cuenta creada correctamente. Ahora puedes iniciar sesión.")
             return redirect("accounts:login")  # 👈 Redirige al login
         else:
-            print("❌ Errores en el formulario:", form.errors)  # 👀 Para depurar en consola
             messages.error(request, "Por favor corrige los errores en el formulario.")
     else:
         form = CustomUserCreationForm()
@@ -43,3 +41,14 @@ def logout_view(request):
     logout(request)
     messages.info(request, "Sesión cerrada correctamente")
     return redirect("accounts:login")
+
+@login_required
+def profile(request):
+    return render(request, "accounts/profile.html")
+@login_required
+def settings_view(request):
+    return render(request, "accounts/settings.html")
+
+def usuarios(request):
+    lista_usuarios = User.objects.all()
+    return render(request, "accounts/usuarios.html", {"usuarios": lista_usuarios})

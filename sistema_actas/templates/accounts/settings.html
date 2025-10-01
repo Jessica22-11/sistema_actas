@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Configuración de la Cuenta</h2>
+    <p>Aquí podrás cambiar opciones de tu cuenta más adelante.</p>
+
+    <ul>
+        <li><strong>Usuario:</strong> {{ request.user.username }}</li>
+        <li><strong>Email:</strong> {{ request.user.email }}</li>
+        <li><strong>Centro:</strong> {{ request.user.centro }}</li>
+    </ul>
+</div>
+{% endblock %}
