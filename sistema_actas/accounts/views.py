@@ -3,6 +3,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
+from .models import User
 
 
 def login_view(request):
@@ -25,6 +26,18 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(commit=False)
+            if "firma_digital" in request.FILES:
+                user.firma_digital = request.FILES["firma_digital"]
+
+            # Generar username único basado en el email
+            base_username = user.email.split('@')[0]
+            username = base_username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            user.username = username
+            
             user.save()
             messages.success(request, "✅ Cuenta creada correctamente. Ahora puedes iniciar sesión.")
             return redirect("accounts:login")  # 👈 Redirige al login

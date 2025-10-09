@@ -3,6 +3,7 @@ from django.conf import settings
 from datetime import datetime
 from django.core.mail import send_mail
 
+
 def generar_acta_con_ia(resumen_reunion, usuario):
     """
     Genera contenido de acta usando IA basado en el resumen de la reunión
