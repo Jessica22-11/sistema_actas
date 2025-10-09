@@ -4,19 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sistema de Gestión de Actas - Centro Minero SENA{% endblock %}</title>
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{% load static %}{% static 'img/favicon.ico' %}">
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Custom CSS -->
     <style>
         :root {
@@ -33,52 +33,46 @@
             --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
             --border-radius: 0.5rem;
         }
-
         * {
             font-family: 'Inter', sans-serif;
         }
-
         body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
             background-color: #f5f7fa;
             color: var(--text-dark);
             line-height: 1.6;
         }
-
         .navbar-brand {
             font-weight: 700;
             color: white !important;
         }
-
         .navbar-sena {
             background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
             box-shadow: var(--shadow-md);
             padding: 1rem 0;
         }
-
         .btn-primary {
             background-color: var(--sena-green);
             border-color: var(--sena-green);
             font-weight: 500;
             transition: all 0.3s ease;
         }
-
         .btn-primary:hover {
             background-color: var(--sena-dark-green);
             border-color: var(--sena-dark-green);
             transform: translateY(-1px);
             box-shadow: var(--shadow-md);
         }
-
         .btn-outline-primary {
             color: var(--sena-green);
             border-color: var(--sena-green);
         }
-
         .btn-outline-primary:hover {
             background-color: var(--sena-green);
             border-color: var(--sena-green);
         }
-
         .card {
             border: none;
             border-radius: var(--border-radius);
@@ -86,36 +80,30 @@
             transition: all 0.3s ease;
             background: white;
         }
-
         .card:hover {
             box-shadow: var(--shadow-md);
             transform: translateY(-2px);
         }
-
         .card-header {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-bottom: 1px solid var(--border-color);
             font-weight: 600;
         }
-
         .stats-card {
             background: linear-gradient(135deg, white 0%, #f8f9fa 100%);
             border-left: 4px solid var(--sena-green);
         }
-
         .stats-card .stats-number {
             font-size: 2.5rem;
             font-weight: 700;
             color: var(--sena-green);
         }
-
         .sidebar {
             background: white;
             min-height: calc(100vh - 76px);
             box-shadow: var(--shadow-sm);
             border-radius: 0 var(--border-radius) var(--border-radius) 0;
         }
-
         .sidebar .nav-link {
             color: var(--text-dark);
             font-weight: 500;
@@ -124,63 +112,52 @@
             border-radius: var(--border-radius);
             transition: all 0.3s ease;
         }
-
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
             background-color: var(--sena-light-green);
             color: var(--sena-dark-green);
             transform: translateX(4px);
         }
-
         .sidebar .nav-link i {
             width: 20px;
             margin-right: 0.75rem;
         }
-
         .badge-estado {
             font-weight: 500;
             padding: 0.5rem 0.75rem;
             border-radius: 20px;
         }
-
         .badge-borrador { background-color: #ffc107; color: #000; }
         .badge-en-revision { background-color: #17a2b8; color: white; }
         .badge-finalizada { background-color: #28a745; color: white; }
         .badge-archivada { background-color: #6c757d; color: white; }
-
         .table-custom {
             background: white;
             border-radius: var(--border-radius);
             overflow: hidden;
             box-shadow: var(--shadow-sm);
         }
-
         .table-custom th {
             background-color: #f8f9fa;
             font-weight: 600;
             border-bottom: 2px solid var(--border-color);
             color: var(--text-dark);
         }
-
         .table-custom tbody tr {
             transition: all 0.3s ease;
         }
-
         .table-custom tbody tr:hover {
             background-color: #f8f9fa;
         }
-
         .progress-custom {
             height: 8px;
             background-color: #e9ecef;
             border-radius: 10px;
         }
-
         .progress-custom .progress-bar {
             background: linear-gradient(90deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
             border-radius: 10px;
         }
-
         .notification-badge {
             position: absolute;
             top: -8px;
@@ -196,27 +173,22 @@
             justify-content: center;
             font-weight: 600;
         }
-
         .form-control:focus,
         .form-select:focus {
             border-color: var(--sena-green);
             box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
         }
-
         .alert-custom {
             border: none;
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-sm);
         }
-
         .loading-spinner {
             display: none;
         }
-
         .loading .loading-spinner {
             display: inline-block;
         }
-
         .ai-processing {
             background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
             border: 1px solid #2196f3;
@@ -225,7 +197,6 @@
             text-align: center;
             margin: 1rem 0;
         }
-
         .signature-pad {
             border: 2px dashed var(--border-color);
             border-radius: var(--border-radius);
@@ -234,31 +205,81 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
-
         .signature-pad:hover {
             border-color: var(--sena-green);
             background-color: var(--sena-light-green);
         }
-
         .main-content {
             padding: 2rem 0;
             min-height: calc(100vh - 76px);
+        }
+
+        /* Estilos para el pie de página */
+        footer {
+            background-color: var(--sena-dark-green);
+            color: white;
+            padding: 2rem 0 0;
+            margin-top: auto;
+        }
+
+        .footer-logo {
+            height: 50px;
+            margin-right: 10px;
+        }
+
+        .footer-section h5 {
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .footer-section p {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+        }
+
+        .footer-section a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+
+        .social-icons a {
+            color: white;
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+
+        .social-icons a:hover {
+            color: #ccc;
+        }
+
+        .certifications img {
+            height: 40px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 0;
+            margin-top: 1rem;
         }
 
         @media (max-width: 768px) {
             .sidebar {
                 display: none;
             }
-            
+
             .main-content {
                 padding: 1rem 0;
             }
-
             .stats-card .stats-number {
                 font-size: 2rem;
             }
         }
-
         /* Animaciones */
         @keyframes fadeInUp {
             from {
@@ -270,30 +291,26 @@
                 transform: translateY(0);
             }
         }
-
         .fade-in-up {
             animation: fadeInUp 0.6s ease-out;
         }
-
         .stagger-1 { animation-delay: 0.1s; }
         .stagger-2 { animation-delay: 0.2s; }
         .stagger-3 { animation-delay: 0.3s; }
         .stagger-4 { animation-delay: 0.4s; }
-
         /* Efectos hover mejorados */
         .hover-lift {
             transition: all 0.3s ease;
         }
-
         .hover-lift:hover {
             transform: translateY(-4px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
     </style>
-    
+
     {% block extra_css %}{% endblock %}
 </head>
-<body class="h-full">
+<body class="d-flex flex-column min-vh-100">
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-sena fixed-top">
         <div class="container-fluid">
@@ -304,11 +321,9 @@
                     <small style="font-size: 0.75rem; opacity: 0.9;">Centro Minero SENA</small>
                 </div>
             </a>
-
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
                     {% if user.is_authenticated %}
@@ -347,7 +362,6 @@
                                 <li><a class="dropdown-item text-center" href="{% url 'notifications:list' %}">Ver todas las notificaciones</a></li>
                             </ul>
                         </li>
-
                         <!-- Usuario -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
@@ -391,7 +405,6 @@
             </div>
         </div>
     </nav>
-
     <!-- Main Content -->
     <div style="margin-top: 76px;">
         <div class="container-fluid">
@@ -408,7 +421,6 @@
                             {% endfor %}
                         </div>
                     {% endif %}
-
                     {% block content %}
                         {% if user.is_authenticated %}
                             <div class="row">
@@ -417,31 +429,31 @@
                                     <div class="sidebar">
                                         <div class="p-3">
                                             <nav class="nav flex-column">
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
                                                     href="{% url 'core:dashboard' %}">
                                                     <i class="fas fa-tachometer-alt"></i>Dashboard
                                                 </a>
-                                                <a class="nav-link {% if 'actas' in request.resolver_match.namespace %}active{% endif %}" 
+                                                <a class="nav-link {% if 'actas' in request.resolver_match.namespace %}active{% endif %}"
                                                     href="{% url 'actas:actas_list' %}">
                                                     <i class="fas fa-file-alt"></i>Mis Actas
                                                 </a>
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'crear_acta' %}active{% endif %}" 
+                                                <a class="nav-link {% if request.resolver_match.url_name == 'crear_acta' %}active{% endif %}"
                                                     href="{% url 'actas:crear' %}">
                                                     <i class="fas fa-plus-circle"></i>Nueva Acta
                                                 </a>
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'mis_compromisos' %}active{% endif %}" 
+                                                <a class="nav-link {% if request.resolver_match.url_name == 'mis_compromisos' %}active{% endif %}"
                                                     href="{% url 'actas:mis_compromisos' %}">
                                                     <i class="fas fa-tasks"></i>Compromisos
                                                 </a>
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'firmas_pendientes' %}active{% endif %}" 
+                                                <a class="nav-link {% if request.resolver_match.url_name == 'firmas_pendientes' %}active{% endif %}"
                                                     href="{% url 'actas:firmas_pendientes' %}">
                                                     <i class="fas fa-signature"></i>Firmas Pendientes
                                                 </a>
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"  
+                                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
                                                     href="{% url 'core:dashboard' %}">
                                                     <i class="fas fa-chart-bar"></i>Reportes
                                                 </a>
-                                                
+
                                                 {% if user.is_staff %}
                                                     <hr>
                                                     <small class="text-muted px-3">ADMINISTRACIÓN</small>
@@ -470,25 +482,100 @@
         </div>
     </div>
 
+    <!-- Pie de Página -->
+    <footer class="bg-success text-white pt-4">
+        <div class="container">
+            <div class="row">
+                <!-- Logo y dirección -->
+                <div class="col-md-4 mb-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{% static 'img/logo_sena_blanco.png' %}" alt="Logo SENA" class="footer-logo">
+                    </div>
+                    <h5>Dirección General</h5>
+                    <p class="mb-1">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        Calle 57 No. 8 - 69 Bogotá D.C. (Cundinamarca), Colombia
+                    </p>
+                    <p class="mb-0">
+                        El SENA brinda a la ciudadanía atención presencial en las 33 Regionales y 118 Centros de Formación
+                    </p>
+                </div>
+
+                <!-- Líneas de atención -->
+                <div class="col-md-4 mb-4">
+                    <h5>Líneas de Atención</h5>
+                    <p class="mb-1">
+                        <i class="fas fa-phone me-2"></i>
+                        Bogotá: +(57) 601 736 60 60
+                    </p>
+                    <p class="mb-1">
+                        Línea gratuita resto del país: 018000910270
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-comments me-2"></i>
+                        Línea de WhatsApp: 3112545028
+                    </p>
+                    <h6 class="mt-3">Horario de Atención</h6>
+                    <p class="mb-0">
+                        Lunes a viernes: 7:00 a.m. a 7:00 p.m.
+                    </p>
+                    <p class="mb-0">
+                        Sábados: 8:00 a.m. a 1:00 p.m.
+                    </p>
+                </div>
+
+                <!-- Redes sociales y certificaciones -->
+                <div class="col-md-4 mb-4">
+                    <h5>Síguenos</h5>
+                    <div class="d-flex mb-3 social-icons">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                    <h5>Certificaciones</h5>
+                    <div class="d-flex flex-wrap certifications">
+                        <img src="{% static 'img/icontec1.png' %}" alt="Certificación ICONTEC">
+                        <img src="{% static 'img/icontec2.png' %}" alt="Certificación ICONTEC">
+                        <img src="{% static 'img/icontec3.png' %}" alt="Certificación ICONTEC">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Copyright -->
+            <div class="footer-bottom border-top pt-3 mt-3 text-center">
+                <div class="row align-items-center">
+                    <div class="col-md-4 text-md-start">
+                        <img src="{% static 'img/gov_co.png' %}" alt="Gobierno de Colombia" style="height: 30px;">
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-0">Copyright © 2025. Todos los derechos reservados.</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <img src="{% static 'img/sofia_plus.png' %}" alt="SOFIA Plus" style="height: 30px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    
+
     <!-- Custom JavaScript -->
     <script>
         // Inicializar tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip']'))
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         })
-
         // Auto-hide alerts after 5 seconds
         setTimeout(function() {
             $('.alert').fadeOut('slow');
         }, 5000);
-
         // Marcar notificaciones como leídas
         $('#notificationDropdown').on('click', function() {
             $.post('{% url "notifications:mark_as_read" %}', {
@@ -496,15 +583,14 @@
             });
         });
     </script>
-    
-    <script src="https://website-widgets.pages.dev/dist/sienna.min.js" defer>
+
+    <script src="https://website-widgets.pages.dev/dist/sienna.min.js" defer></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-        // Call your exported functions here to test
-        SiennaAccessibility.load();
+            SiennaAccessibility.load();
         });
     </script>
-    
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>
