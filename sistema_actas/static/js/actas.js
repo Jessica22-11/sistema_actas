@@ -1,4 +1,5 @@
 // Funcionalidad específica para el módulo de actas
+console.log("El archivo JavaScript de ActasManager se ha cargado correctamente.");
 class ActasManager {
   constructor() {
     this.initializeEventListeners();
@@ -21,6 +22,7 @@ class ActasManager {
 
     // Agregar participante
     $("#btn-agregar-participante").on("click", (e) => {
+      console.log("Botón de agregar participante clickeado.");
       e.preventDefault();
       this.agregarParticipante();
     });
@@ -186,6 +188,7 @@ class ActasManager {
   }
 
   agregarParticipante() {
+    console.log("Método agregarParticipante llamado.");
     const participanteHtml = `
             <div class="item-dinamico participante-item mb-3 p-3 border rounded bg-light fade-in-up">
                 <div class="row align-items-center">
@@ -208,7 +211,7 @@ class ActasManager {
                 </div>
             </div>
         `;
-
+        console.log("Agregando HTML del participante al contenedor.");
     $("#participantes-container").append(participanteHtml);
 
     // Animar entrada
@@ -467,3 +470,4 @@ $(document).ready(() => {
     }
   });
 });
+console.log("jQuery cargado:", typeof jQuery !== 'undefined');
