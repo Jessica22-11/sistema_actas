@@ -13,10 +13,12 @@ class User (AbstractUser) :
         ('coordinador', 'Coordinador'),
         ('director', 'Director'),
         ('admin', 'Administrador'),
+        ('instructor', 'Instructor'),
+        ('aprendiz','Aprendiz'),
     ]
     
     #Sobreescribimos algunos campos de AbstractUser y agrego nuevos campos
-    email = models.EmailField (unique=True)
+    email = models.EmailField (unique=True, validators=[validate_email])
     rol = models.CharField (max_length=20, choices=ROLES, default='funcionario')
     centro = models.CharField(max_length=100, default='Centro Minero')
     telefono = models.CharField (max_length=15, blank=True)
@@ -34,14 +36,32 @@ class User (AbstractUser) :
         verbose_name_plural = 'Usuarios' #Nombre plural en el admin
         ordering = ['first_name', 'last_name'] #Orden por nombre y apellido
 
-    #Validaciones personalizadas
+    #Validaciones personalizadas segun el rol
     def clean(self):
         super().clean()
-    
+        
+        if self.rol == 'aprendiz':
+            dominos_validos = ['@soy.sena.edu.co', '@gmail.com']
+            if not any(self.email.endswith(d) for d in dominos_validos):
+                raise ValidationError("El correo del aprendiz debe ser institucional @soy.sena.edu.co o @gmail.com")
+            elif self.rol in ['funcionario', 'coordinador', 'director', 'instructor']:
+                dominos_validos = ['@sena.edu.co', '@gmail.com']
+                if not any(self.email.endswith(d) for d in dominos_validos):
+                    raise ValidationError("El correo debe ser institucional @sena.edu.co o @gmail.com")
+                
+            if self.rol =='admin' and not (self.is_staff and self.is_superuser):
+                raise ValidationError("Solo los super ususarios pueden tener el rol de Administrador")
+
     #Guardado Personalizado
     def save (self, *args, **kwargs):
         #Redimensionar firma digital si es muy grade
         super().save(*args, **kwargs)
+        
+        if self.rol =='admin':
+            self.is_staff = True
+            self.is_superuser = True
+            super().save(*args, **kwargs)
+            
         if self.firma_digital:
             img = Image.open(self.firma_digital.path)
             if img.height > 200 or img.width > 400:

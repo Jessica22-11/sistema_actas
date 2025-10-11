@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .forms import CustomUserCreationForm, CustomAuthenticationForm
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, ProfileUpdateForm
 from .models import User
 
 
@@ -26,10 +26,13 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(commit=False)
-            if "firma_digital" in request.FILES:
-                user.firma_digital = request.FILES["firma_digital"]
 
-            # Generar username único basado en el email
+            # ✅ Asignar firma digital si se subió
+            firma = request.FILES.get("firma_digital")
+            if firma:
+                user.firma_digital = firma
+
+            # ✅ Generar username único basado en el email
             base_username = user.email.split('@')[0]
             username = base_username
             counter = 1
@@ -37,12 +40,14 @@ def register_view(request):
                 username = f"{base_username}{counter}"
                 counter += 1
             user.username = username
-            
+
+            # ✅ Guardar usuario en la base de datos
             user.save()
+
             messages.success(request, "✅ Cuenta creada correctamente. Ahora puedes iniciar sesión.")
-            return redirect("accounts:login")  # 👈 Redirige al login
+            return redirect("accounts:login")
         else:
-            messages.error(request, "Por favor corrige los errores en el formulario.")
+            messages.error(request, "⚠️ Por favor corrige los errores en el formulario.")
     else:
         form = CustomUserCreationForm()
 
@@ -59,8 +64,30 @@ def logout_view(request):
 def profile(request):
     return render(request, "accounts/profile.html")
 @login_required
+
+@login_required
 def settings_view(request):
-    return render(request, "accounts/settings.html")
+    user = request.user
+
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            profile = form.save(commit=False)
+
+            # Si el usuario cambia la contraseña
+            new_password = form.cleaned_data.get('password')
+            if new_password:
+                user.set_password(new_password)
+
+            profile.save()
+            messages.success(request, "✅ Perfil actualizado correctamente.")
+            return redirect('accounts:settings')
+        else:
+            messages.error(request, "⚠️ Corrige los errores en el formulario.")
+    else:
+        form = ProfileUpdateForm(instance=user)
+
+    return render(request, 'accounts/settings.html', {'form': form})
 
 def usuarios(request):
     lista_usuarios = User.objects.all()

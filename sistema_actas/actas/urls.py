@@ -27,4 +27,5 @@ urlpatterns = [
     path("<int:acta_id>/compromisos/nuevo/", views.crear_compromiso, name="crear_compromiso"),
     path("compromisos/<int:compromiso_id>/editar/", views.editar_compromiso, name="editar_compromiso"),
     path("compromisos/<int:compromiso_id>/eliminar/", views.eliminar_compromiso, name="eliminar_compromiso"),
+    
 ]

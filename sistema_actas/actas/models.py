@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 import uuid
+from accounts.models import User
 
 User = get_user_model()
 
@@ -203,3 +204,12 @@ class Compromiso(models.Model):
     
     def __str__(self):
         return f"Compromiso {self.id} - {self.acta.numero_acta}"
+    
+class ComentarioActa(models.Model):
+    acta = models.ForeignKey('Acta', on_delete=models.CASCADE, related_name='comentarios')
+    autor = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+    texto = models.TextField()
+    fecha = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Comentario de {self.autor.get_full_name()} en {self.acta.numero_acta}"
