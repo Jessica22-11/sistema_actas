@@ -128,134 +128,162 @@
         text-decoration: underline;
     }
 
+    .login-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    justify-content: space-between; /* Header y footer bien distribuidos */
+    }
+
+    .login-main {
+        margin-top: -30px;
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 0; /* menos margen arriba y abajo */
+        margin: 0; /* eliminamos espacios extra */
+    }
+
+    .container.py-5 {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+
+    /* Evitar que el body centre todo (dejamos que el wrapper lo haga) */
+    body {
+        display: block !important;
+    }
+
+
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="floating-shapes">
-    <div class="shape"></div>
-    <div class="shape"></div>
-    <div class="shape"></div>
-</div>
-
-<div class="container py-5" style="z-index: 10;">
-    <div class="row justify-content-center align-items-center">
-        <div class="col-lg-5 d-none d-lg-block">
-            <div class="info-panel">
-                <h4 class="mb-3">
-                    <i class="fas fa-file-alt me-2"></i>
-                    Sistema de Actas
-                </h4>
-                <p>Transformación digital para la gestión de actas institucionales del Centro Minero SENA.</p>
-                
-                <h6 class="mt-4">Características:</h6>
-                <ul>
-                    <li>Procesamiento con Inteligencia Artificial</li>
-                    <li>Firmas digitales seguras</li>
-                    <li>Seguimiento de compromisos</li>
-                    <li>Notificaciones automáticas</li>
-                    <li>Generación de reportes PDF</li>
-                    <li>Silencio administrativo</li>
-                </ul>
-
-                <div class="mt-4 p-3 bg-warning bg-opacity-25 rounded" style="color: black;">
-                    <h6><i class="fas fa-info-circle me-1"></i> Importante</h6>
-                    <small>Solo funcionarios con email **@sena.edu.co** pueden acceder al sistema. Se permite temporalmente el ingreso con **@gmail.com**.</small>
-                </div>
-            </div>
+<div class="login-wrapper">
+    <div class="login-main">
+        <div class="floating-shapes">
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
         </div>
 
-        <div class="col-lg-5 col-md-8 col-sm-10">
-            <div class="login-card">
-                <div class="login-header">
-                    <div class="sena-logo">
-                        <i class="fas fa-building"></i>
+        <div class="container py-5" style="z-index: 10;">
+            <div class="row justify-content-center align-items-center">
+                <div class="col-lg-5 d-none d-lg-block">
+                    <div class="info-panel">
+                        <h4 class="mb-3">
+                            <i class="fas fa-file-alt me-2"></i>
+                            Sistema de Actas
+                        </h4>
+                        <p>Transformación digital para la gestión de actas institucionales del Centro Minero SENA.</p>
+                        
+                        <h6 class="mt-4">Características:</h6>
+                        <ul>
+                            <li>Procesamiento con Inteligencia Artificial</li>
+                            <li>Firmas digitales seguras</li>
+                            <li>Seguimiento de compromisos</li>
+                            <li>Notificaciones automáticas</li>
+                            <li>Generación de reportes PDF</li>
+                            <li>Silencio administrativo</li>
+                        </ul>
+
+                        <div class="mt-4 p-3 bg-warning bg-opacity-25 rounded" style="color: black;">
+                            <h6><i class="fas fa-info-circle me-1"></i> Importante</h6>
+                            <small>Solo funcionarios con email **@sena.edu.co** pueden acceder al sistema. Se permite temporalmente el ingreso con **@gmail.com**.</small>
+                        </div>
                     </div>
-                    <h3 class="mb-1">Bienvenido</h3>
-                    <h5 class="mb-0 opacity-75">Sistema de Gestión de Actas</h5>
-                    <small>Centro Minero SENA</small>
                 </div>
 
-                <div class="login-form">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="col-lg-5 col-md-8 col-sm-10">
+                    <div class="login-card">
+                        <div class="login-header">
+                            <div class="sena-logo">
+                                <i class="fas fa-building"></i>
                             </div>
-                        {% endfor %}
-                    {% endif %}
+                            <h3 class="mb-1">Bienvenido</h3>
+                            <h5 class="mb-0 opacity-75">Sistema de Gestión de Actas</h5>
+                            <small>Centro Minero SENA</small>
+                        </div>
 
-                        <form method="post" id="loginForm">
-                            {% csrf_token %}
-                            
-                            <div class="form-floating mb-3">
-                                {{ form.username }}
-                                <label for="email">
-                                    <i class="fas fa-envelope me-1"></i>
-                                    Correo Institucional
-                                </label>
-                                <div class="invalid-feedback">
-                                    Por favor ingrese un correo @sena.edu.co o @soy.sena.edu.co válido
+                        <div class="login-form">
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            <form method="post" id="loginForm">
+                                {% csrf_token %}
+                                
+                                <div class="form-floating mb-3">
+                                    {{ form.username }}
+                                    <label for="email">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        Correo Institucional
+                                    </label>
                                 </div>
+
+                                <div class="form-floating mb-3 position-relative">
+                                    {{ form.password }}
+                                    <label for="{{ form.password.id_for_label }}">
+                                        <i class="fas fa-lock me-1"></i>
+                                        Contraseña
+                                    </label>
+                                    <div class="password-toggle" 
+                                        style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d;">
+                                        <i class="fas fa-eye" id="togglePassword"></i>
+                                    </div>
+                                </div>
+
+                                <div class="form-check mb-4">
+                                    <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                    <label class="form-check-label" for="remember">
+                                        Recordar sesión
+                                    </label>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-login w-100">
+                                    <span class="login-text">
+                                        <i class="fas fa-sign-in-alt me-2"></i>
+                                        Iniciar Sesión
+                                    </span>
+                                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                </button>
+                            </form>
+                            
+                            <div class="text-center mt-3 mb-4">
+                                <a href="{% url 'accounts:password_reset' %}" class="forgot-link">
+                                    ¿Olvidaste tu contraseña?
+                                </a>
                             </div>
 
-                        <div class="form-floating mb-3 position-relative">
-                            {{ form.password }}
-                            <label for="{{ form.password.id_for_label }}">
-                                <i class="fas fa-lock me-1"></i>
-                                Contraseña
-                            </label>
-                            <div class="password-toggle" 
-                                style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d;">
-                                <i class="fas fa-eye" id="togglePassword"></i>
+                            <div class="divider">
+                                <span>¿Primera vez?</span>
                             </div>
+
+                            <div class="register-link text-center mt-3">
+                                <a href="{% url 'accounts:register' %}" class="register-btn">
+                                    <i class="fas fa-user-plus me-1"></i>
+                                    Registrarse
+                                </a>
+                            </div>
+
                         </div>
-
-                        <div class="form-check mb-4">
-                            <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                            <label class="form-check-label" for="remember">
-                                Recordar sesión
-                            </label>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-login w-100">
-                            <span class="login-text">
-                                <i class="fas fa-sign-in-alt me-2"></i>
-                                Iniciar Sesión
-                            </span>
-                            <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        </button>
-                    </form>
-                    
-                    <div class="text-center mt-3 mb-4">
-                        <a href="{% url 'accounts:password_reset' %}" class="forgot-link">
-                            ¿Olvidaste tu contraseña?
-                        </a>
-                    </div>
-
-
-                    <div class="divider">
-                        <span>¿Primera vez?</span>
-                    </div>
-
-                    <div class="register-link text-center mt-3">
-                        <a href="{% url 'accounts:register' %}" class="register-btn">
-                            <i class="fas fa-user-plus me-1"></i>
-                            Registrarse
-                        </a>
-                    </div>
-
                     </div>
                 </div>
-            </div>
 
-            <div class="text-center mt-3 d-lg-none">
-                <small class="text-white-50">
-                    <i class="fas fa-shield-alt me-1"></i>
-                    Conexión segura y cifrada
-                </small>
+                <div class="text-center mt-3 d-lg-none">
+                    <small class="text-white-50">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Conexión segura y cifrada
+                    </small>
+                </div>
             </div>
         </div>
     </div>

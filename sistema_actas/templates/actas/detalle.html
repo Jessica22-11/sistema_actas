@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}{{ acta.numero_acta }} - Detalle de Acta{% endblock %}
-
 {% block extra_css %}
 <style>
     .acta-header {
@@ -13,30 +11,25 @@
         padding: 2rem;
         margin-bottom: 2rem;
     }
-
     .estado-badge {
         font-size: 1rem;
         padding: 0.75rem 1.25rem;
         border-radius: 25px;
         font-weight: 600;
     }
-
     .progress-firmas {
         height: 12px;
         border-radius: 10px;
         background: rgba(255,255,255,0.3);
     }
-
     .progress-firmas .progress-bar {
         border-radius: 10px;
         background: rgba(255,255,255,0.9);
     }
-
     .timeline {
         position: relative;
         padding-left: 2rem;
     }
-
     .timeline::before {
         content: '';
         position: absolute;
@@ -46,12 +39,10 @@
         width: 2px;
         background: var(--border-color);
     }
-
     .timeline-item {
         position: relative;
         padding-bottom: 1.5rem;
     }
-
     .timeline-item::before {
         content: '';
         position: absolute;
@@ -62,49 +53,39 @@
         border-radius: 50%;
         background: var(--sena-green);
     }
-
     .firma-card {
         transition: all 0.3s ease;
     }
-
     .firma-card:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-md);
     }
-
     .firma-completada {
         border-left: 4px solid #28a745;
     }
-
     .firma-pendiente {
         border-left: 4px solid #ffc107;
     }
-
     .compromiso-card {
         border-left: 4px solid var(--sena-green);
         transition: all 0.3s ease;
     }
-
     .compromiso-vencido {
         border-left-color: #dc3545;
         background: #fff5f5;
     }
-
     .compromiso-completado {
         border-left-color: #28a745;
         background: #f8fff8;
     }
-
     .action-buttons .btn {
         margin-right: 0.5rem;
         margin-bottom: 0.5rem;
     }
-
     .silencio-administrativo {
         background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
         border: 1px solid #ffc107;
     }
-
     @media print {
         .action-buttons, .navbar, .sidebar, .no-print {
             display: none !important;
@@ -112,7 +93,6 @@
     }
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="container-fluid">
     <!-- Header del Acta -->
@@ -162,51 +142,49 @@
             </div>
         </div>
     </div>
-
     <!-- Alerts Container -->
     <div id="alerts-container"></div>
-
     <!-- Botones de Acción -->
     <div class="action-buttons no-print mb-4">
         <div class="d-flex flex-wrap">
             <a href="{% url 'actas:actas_list' %}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i>Volver a Lista
             </a>
-            
+
             {% if puede_editar %}
                 <a href="{% url 'actas:editar' acta.id %}" class="btn btn-primary">
                     <i class="fas fa-edit me-1"></i>Editar
                 </a>
             {% endif %}
-            
+
             {% if puede_enviar_revision %}
                 <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modal-enviar-revision">
                     <i class="fas fa-paper-plane me-1"></i>Enviar a Revisión
                 </button>
             {% endif %}
-            
+
             {% if puede_firmar %}
                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modal-firma">
                     <i class="fas fa-signature me-1"></i>Firmar Acta
                 </button>
             {% endif %}
-            
+
             {% if puede_finalizar %}
                 <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modal-finalizar">
                     <i class="fas fa-check-circle me-1"></i>Finalizar
                 </button>
             {% endif %}
-            
+
             <a href="{% url 'actas:pdf' acta.id %}" class="btn btn-outline-primary" target="_blank">
                 <i class="fas fa-file-pdf me-1"></i>Descargar PDF
             </a>
-            
+
             <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
                 <i class="fas fa-print me-1"></i>Imprimir
             </button>
         </div>
     </div>
-
+    <!-- Contenido del acta -->
     <div class="row">
         <!-- Contenido Principal -->
         <div class="col-lg-8">
@@ -265,7 +243,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Orden del Día -->
             {% if acta.orden_dia %}
             <div class="card hover-lift mb-4">
@@ -282,7 +259,6 @@
                 </div>
             </div>
             {% endif %}
-
             <!-- Desarrollo de la Reunión -->
             {% if acta.desarrollo %}
             <div class="card hover-lift mb-4">
@@ -296,7 +272,7 @@
                     <div class="formatted-content">
                         {{ acta.desarrollo|linebreaks }}
                     </div>
-                    
+
                     {% if acta.resumen_ia %}
                         <div class="mt-3 p-3 bg-light rounded">
                             <h6 class="text-muted">
@@ -308,7 +284,6 @@
                 </div>
             </div>
             {% endif %}
-
             <!-- Observaciones -->
             {% if acta.observaciones %}
             <div class="card hover-lift mb-4">
@@ -325,7 +300,6 @@
                 </div>
             </div>
             {% endif %}
-
             <!-- Archivo Adjunto -->
             {% if acta.archivo_adjunto %}
             <div class="card hover-lift mb-4">
@@ -344,7 +318,6 @@
             </div>
             {% endif %}
         </div>
-
         <!-- Sidebar Derecho -->
         <div class="col-lg-4">
             <!-- Participantes y Firmas -->
@@ -390,7 +363,6 @@
                     {% endfor %}
                 </div>
             </div>
-
             <!-- Compromisos -->
             {% if compromisos %}
             <div class="card hover-lift mb-4">
@@ -432,7 +404,6 @@
                 </div>
             </div>
             {% endif %}
-
             <!-- Timeline de Actividad -->
             <div class="card hover-lift">
                 <div class="card-header">
@@ -476,6 +447,30 @@
     </div>
 </div>
 
+<!-- Modal para Enviar a Revisión -->
+<div class="modal fade" id="modal-enviar-revision" tabindex="-1" aria-labelledby="modalEnviarRevisionLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalEnviarRevisionLabel">Enviar a Revisión</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        ¿Estás seguro de que deseas enviar esta acta a revisión? Los participantes recibirán una notificación para firmar el acta.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form action="{% url 'actas:enviar_revision' acta.id %}" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane me-1"></i>Enviar a Revisión
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal para Firmar Acta -->
 <div class="modal fade" id="modal-firma" tabindex="-1">
     <div class="modal-dialog">
@@ -492,13 +487,12 @@
                     <i class="fas fa-info-circle me-2"></i>
                     Al firmar esta acta, confirma que está de acuerdo con su contenido y que ha participado en la reunión.
                 </div>
-                
+
                 <div class="mb-3">
                     <label for="comentarios-firma" class="form-label">Comentarios (Opcional)</label>
-                    <textarea class="form-control" id="comentarios-firma" rows="3" 
+                    <textarea class="form-control" id="comentarios-firma" rows="3"
                               placeholder="Agregue comentarios adicionales si es necesario..."></textarea>
                 </div>
-
                 <div class="text-center">
                     <p class="text-muted mb-3">Su firma digital será aplicada automáticamente</p>
                     {% if user.firma_digital %}
@@ -524,12 +518,32 @@
 <!-- Inputs ocultos para JavaScript -->
 <input type="hidden" id="acta-id" value="{{ acta.id }}">
 {% endblock %}
-
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Event listeners ya están configurados en actasManager
-    
+    // Inicializar manualmente el modal de enviar a revisión
+    var enviarRevisionModal = new bootstrap.Modal(document.getElementById('modal-enviar-revision'));
+
+    // Manejar el envío del formulario dentro del modal
+    $('#modal-enviar-revision form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: form.serialize(),
+            success: function(response) {
+                window.location.reload(); // Recargar la página para ver los cambios
+            },
+            error: function(xhr, status, error) {
+                console.error("Error:", error);
+                alert("Ocurrió un error al enviar el acta a revisión.");
+            }
+        });
+    });
+
     // Actualizar progreso de firmas en tiempo real
     function actualizarProgresoFirmas() {
         const actaId = $('#acta-id').val();

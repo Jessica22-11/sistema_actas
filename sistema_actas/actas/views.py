@@ -118,7 +118,7 @@ def editar_acta(request, acta_id):
         # Actualizar compromisos
         compromisos_data = []
         for key in request.POST.keys():
-            if key.startswitch("compromiso_desc_"):
+            if key.startswith("compromiso_desc_"):
                 index = key.split("_")[-1]
                 if request.POST.get(f"compromiso_desc_{index}").strip():
                     compromisos_data.append(
