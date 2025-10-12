@@ -704,3 +704,39 @@ def agregar_comentario(request, acta_id):
 
     ComentarioActa.objects.create(acta=acta, autor=request.user, texto=texto)
     return JsonResponse({"success": True, "message": "Comentario agregado correctamente."})
+
+@login_required
+def aprendiz_pendientes(request):
+    if request.user.rol != 'aprendiz':
+        messages.error(request, "No tienes permisos para acceder a esta sección.")
+        return redirect('actas:actas_list')
+
+    # Filtramos las actas que están en revisión y que el aprendiz debe firmar
+    firmas = Firma.objects.filter(
+        usuario=request.user,
+        firmado=False,
+        acta__estado='en_revision'
+    ).select_related('acta')
+
+    context = {
+        'firmas': firmas,
+        'titulo': "Actas pendientes por firmar"
+    }
+    return render(request, 'actas/aprendiz/pendientes.html', context)
+
+@login_required
+def aprendiz_compromisos(request):
+    if request.user.rol != 'aprendiz':
+        messages.error(request, "No tienes permisos para acceder a esta sección.")
+        return redirect('actas:actas_list')
+
+    compromisos = Compromiso.objects.filter(
+        responsable=request.user
+    ).select_related('acta').order_by('-fecha_limite')
+
+    context = {
+        'compromisos': compromisos,
+        'titulo': "Mis compromisos asignados"
+    }
+    return render(request, 'actas/aprendiz/compromisos.html', context)
+

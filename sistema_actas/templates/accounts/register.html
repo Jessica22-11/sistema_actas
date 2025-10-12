@@ -276,6 +276,8 @@
                                                 <option value="funcionario">Funcionario</option>
                                                 <option value="coordinador">Coordinador</option>
                                                 <option value="director">Director</option>
+                                                <option value="instructor">Instructor</option>
+                                                <option value="aprendiz">Aprendiz</option>
                                             </select>
                                             <label for="rol">Rol en el Centro</label>
                                         </div>
@@ -300,11 +302,14 @@
                                 <h5 class="mb-3">Credenciales de Acceso</h5>
                                 
                                 <div class="form-floating mb-3">
-                                    <input type="email" class="form-control email-sena" id="email" name="email" 
-                                            pattern=".*@sena\.edu\.co$" required>
-                                    <label for="email">Correo Institucional</label>
-                                    <div class="form-text">Debe ser un correo @sena.edu.co</div>
-                                </div>
+                                <input type="email" class="form-control email-sena" id="email" name="email"
+                                    title="Debe ser un correo @sena.edu.co, @soy.sena.edu.co o @gmail.com"
+                                    placeholder="usuario@sena.edu.co, usuario@soy.sena.edu.co o usuario@gmail.com"
+                                    required>
+                                <label for="email">Correo Institucional</label>
+                                <div class="form-text">Debe ser un correo @sena.edu.co, @soy.sena.edu.co o @gmail.com</div>
+                                <div class="invalid-feedback">El correo ingresado no es válido</div>
+                            </div>
 
                                 <div class="form-floating mb-3">
                                     <input type="text" class="form-control" id="username" name="username" readonly>
@@ -488,20 +493,27 @@ function validateStep(step) {
     // Validaciones específicas por paso
     switch(step) {
         case 2:
-            // Validar email SENA
-            const email = $('#email').val();
-            if (!email.endsWith('@sena.edu.co')) {
+            const email = $('#email').val().trim().toLowerCase();
+            const dominiosValidos = ['@sena.edu.co', '@soy.sena.edu.co', '@gmail.com'];
+
+            // Validar dominio del correo
+            if (!dominiosValidos.some(d => email.endsWith(d))) {
                 $('#email').addClass('is-invalid');
+                showAlert('El correo debe ser @sena.edu.co, @soy.sena.edu.co o @gmail.com', 'error');
                 valid = false;
+            } else {
+                $('#email').removeClass('is-invalid');
             }
-            
+
             // Validar contraseñas coinciden
             if ($('#password1').val() !== $('#password2').val()) {
                 $('#password2').addClass('is-invalid');
                 showAlert('Las contraseñas no coinciden', 'error');
                 valid = false;
+            } else {
+                $('#password2').removeClass('is-invalid');
             }
-            break;
+        break;
     }
     
     if (!valid) {
@@ -537,15 +549,17 @@ function generateConfirmation() {
 $(document).ready(function() {
     // Auto-generar username desde email
     $('#email').on('input', function() {
-        const email = $(this).val();
+        const email = $(this).val().trim();
         const username = email.split('@')[0];
         $('#username').val(username);
         
         // Validar email SENA
-        if (email && !email.endsWith('@sena.edu.co')) {
-            $(this).addClass('is-invalid');
+        const dominiosValidos = ['@sena.edu.co', '@soy.sena.edu.co', '@gmail.com'];
+        if (!dominiosValidos.some(d => email.endsWith(d))) {
+            $('#email').addClass('is-invalid');
+            showAlert('El correo debe ser @sena.edu.co, @soy.sena.edu.co o @gmail.com', 'error');
         } else {
-            $(this).removeClass('is-invalid');
+            $('#email').removeClass('is-invalid');
         }
     });
     

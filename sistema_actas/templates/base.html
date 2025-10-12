@@ -184,36 +184,58 @@
     <!-- ===== SIDEBAR (solo autenticado) ===== -->
     {% if user.is_authenticated %}
     <aside class="sidebar">
-        <h6>Menú Principal</h6>
-        <nav class="nav flex-column">
-            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
-                <i class="fas fa-home"></i>Inicio
-            </a>
-            <a class="nav-link" href="{% url 'actas:actas_list' %}">
-                <i class="fas fa-file-alt"></i>Mis Actas
-            </a>
-            <a class="nav-link" href="{% url 'actas:crear' %}">
-                <i class="fas fa-plus-circle"></i>Nueva Acta
-            </a>
-            <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
-                <i class="fas fa-signature"></i>Firmas Pendientes
-            </a>
-            <a class="nav-link" href="{% url 'actas:mis_compromisos' %}">
-                <i class="fas fa-tasks"></i>Compromisos
-            </a>
-            {% if user.is_staff %}
-            <hr>
-            <h6>Administración</h6>
-            <a class="nav-link" href="{% url 'accounts:usuarios' %}">
-                <i class="fas fa-users"></i>Usuarios
-            </a>
-            <a class="nav-link" href="{% url 'admin:index' %}">
-                <i class="fas fa-tools"></i>Panel Admin
-            </a>
-            {% endif %}
-        </nav>
+        {% if user.rol != "aprendiz" %}
+            <h6>Menú Principal</h6>
+            <nav class="nav flex-column">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
+                    <i class="fas fa-home"></i>Inicio
+                </a>
+                <a class="nav-link" href="{% url 'actas:actas_list' %}">
+                    <i class="fas fa-file-alt"></i>Mis Actas
+                </a>
+                <a class="nav-link" href="{% url 'actas:crear' %}">
+                    <i class="fas fa-plus-circle"></i>Nueva Acta
+                </a>
+                <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
+                    <i class="fas fa-signature"></i>Firmas Pendientes
+                </a>
+                <a class="nav-link" href="{% url 'actas:mis_compromisos' %}">
+                    <i class="fas fa-tasks"></i>Compromisos
+                </a>
+
+                {% if user.is_staff %}
+                <hr>
+                <h6>Administración</h6>
+                <a class="nav-link" href="{% url 'accounts:usuarios' %}">
+                    <i class="fas fa-users"></i>Usuarios
+                </a>
+                <a class="nav-link" href="{% url 'admin:index' %}">
+                    <i class="fas fa-tools"></i>Panel Admin
+                </a>
+                {% endif %}
+            </nav>
+
+        {% else %}
+            <!-- MENÚ EXCLUSIVO DE APRENDIZ -->
+            <h6>Zona del Aprendiz</h6>
+            <nav class="nav flex-column">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
+                    <i class="fas fa-home"></i>Inicio
+                </a>
+                <a class="nav-link" href="{% url 'actas:aprendiz_pendientes' %}">
+                    <i class="fas fa-file-signature"></i>Actas Pendientes
+                </a>
+                <a class="nav-link" href="{% url 'actas:aprendiz_compromisos' %}">
+                    <i class="fas fa-list-check"></i>Mis Compromisos
+                </a>
+                <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
+                    <i class="fas fa-signature"></i>Firmas Pendientes
+                </a>
+            </nav>
+        {% endif %}
     </aside>
     {% endif %}
+
 
     <!-- ===== CONTENIDO PRINCIPAL ===== -->
     <main class="main-content {% if user.is_authenticated %}with-sidebar{% endif %}">

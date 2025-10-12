@@ -244,7 +244,7 @@
                                     Correo Institucional
                                 </label>
                                 <div class="invalid-feedback">
-                                    Por favor ingrese un correo @sena.edu.co válido
+                                    Por favor ingrese un correo @sena.edu.co o @soy.sena.edu.co válido
                                 </div>
                             </div>
 
@@ -283,7 +283,7 @@
                         <div class="register-link">
                             <a href="{% url 'accounts:register' %}">
                                 <i class="fas fa-user-plus me-1"></i>
-                                Registrarse como funcionario SENA
+                                Registrarse
                             </a>
                         </div>
                     </div>
@@ -314,10 +314,13 @@ $(document).ready(function() {
     });
 
     // Validación en tiempo real del email (SENA o Gmail)
+    // ✅ Validación en tiempo real del email (SENA institucional, aprendiz o Gmail)
     $('#email').on('input', function() {
-        const email = $(this).val();
+        const email = $(this).val().toLowerCase().trim();
         const isValid = (
-            email.endsWith('@sena.edu.co') || email.endsWith('@gmail.com')
+            email.endsWith('@sena.edu.co') ||
+            email.endsWith('@soy.sena.edu.co') ||
+            email.endsWith('@gmail.com')
         );
 
         if (email.length > 0) {
@@ -331,6 +334,7 @@ $(document).ready(function() {
         }
     });
 
+
     // Manejo del formulario con loading state
     $('#loginForm').on('submit', function(e) {
         const $form = $(this);
@@ -339,12 +343,19 @@ $(document).ready(function() {
         const $text = $button.find('.login-text');
 
         // Validar email antes de enviar
-        const email = $('#email').val();
-        if (!(email.endsWith('@sena.edu.co') || email.endsWith('@gmail.com'))) {
-            e.preventDefault();
-            $('#email').addClass('is-invalid');
-            return false;
-        }
+        const email = $('#email').val().trim();
+        if (
+        !(
+            email.endsWith('@sena.edu.co') ||
+            email.endsWith('@soy.sena.edu.co') ||
+            email.endsWith('@gmail.com')
+        )
+        ) {
+        e.preventDefault();
+        $('#email').addClass('is-invalid');
+        alert('El correo debe ser institucional (@sena.edu.co o @soy.sena.edu.co) o de Gmail.');
+        return false;
+}
 
         // Mostrar loading state
         $button.prop('disabled', true);

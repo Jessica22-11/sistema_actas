@@ -28,4 +28,6 @@ urlpatterns = [
     path("compromisos/<int:compromiso_id>/editar/", views.editar_compromiso, name="editar_compromiso"),
     path("compromisos/<int:compromiso_id>/eliminar/", views.eliminar_compromiso, name="eliminar_compromiso"),
     
+    path("aprendiz/pendientes/", views.aprendiz_pendientes, name="aprendiz_pendientes"),
+    path("aprendiz/compromisos/", views.aprendiz_compromisos, name="aprendiz_compromisos"),
 ]

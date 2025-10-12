@@ -10,20 +10,28 @@ class CustomUserCreationForm(UserCreationForm):
     def clean_email(self):
         email = self.cleaned_data.get("email", "").lower()
         rol = self.cleaned_data.get("rol")
-        
+
         if rol == 'aprendiz':
-            dominos_validos = ['@soy.sena.edu.co', '@gmail.com']
-            if not any(email.endswith(d) for d in dominos_validos):
-                raise forms.ValidationError("El correo del aprendiz debe ser institucional @soy.sena.edu.co o @gmail.com")
-            elif rol in ['funcionario', 'coordinador', 'director', 'instructor']:
-                dominos_validos = ['@sena.edu.co', '@gmail.com']
-                if not any(email.endswith(d) for d in dominos_validos):
-                    raise forms.ValidationError("El correo debe ser institucional @sena.edu.co o @gmail.com")
-            elif rol =='admin':
+            dominios_validos = ['@soy.sena.edu.co', '@gmail.com']
+            if not any(email.endswith(d) for d in dominios_validos):
                 raise forms.ValidationError(
-                    'No puedes registarrte como Administrador. Este rol solo puede ser asignado por el sistema.'
+                    "El correo del aprendiz debe ser institucional @soy.sena.edu.co o @gmail.com"
                 )
-        return email    
+
+        elif rol in ['funcionario', 'coordinador', 'director', 'instructor']:
+            dominios_validos = ['@sena.edu.co', '@gmail.com']
+            if not any(email.endswith(d) for d in dominios_validos):
+                raise forms.ValidationError(
+                    "El correo debe ser institucional @sena.edu.co o @gmail.com"
+                )
+
+        elif rol == 'admin':
+            raise forms.ValidationError(
+                "No puedes registrarte como Administrador. Este rol solo puede ser asignado por el sistema."
+            )
+
+        return email
+
     def clean_firma_digital(self):
         firma = self.cleaned_data.get("firma_digital")
         if firma:
