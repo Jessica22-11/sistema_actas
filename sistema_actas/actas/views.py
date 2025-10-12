@@ -191,10 +191,17 @@ def firmar_acta(request, acta_id):
             )
 
         # Procesar Firma
-        comentarios = request.POST.get("comentarios", "")
         firma.comentarios = comentarios
-        firma.firmar(request)
+        firma.firmado = True
+        firma.fecha_firma = timezone.now()
 
+        # Si el usuario tiene una firma digital guardada, úsala
+        if request.user.firma_digital:
+            firma.firma_imagen = request.user.firma_digital
+
+        # Guarda dirección IP si quieres mantenerla
+        firma.ip_address = firma.get_client_ip(request)
+        firma.save()
         # Crear notificaciones para el creador del acta
         Notification.objects.create(
             usuario=acta.creador,

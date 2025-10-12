@@ -30,4 +30,6 @@ urlpatterns = [
     
     path("aprendiz/pendientes/", views.aprendiz_pendientes, name="aprendiz_pendientes"),
     path("aprendiz/compromisos/", views.aprendiz_compromisos, name="aprendiz_compromisos"),
+    path('actas/<int:acta_id>/firmar/', views.firmar_acta, name='firmar_acta'),
+
 ]

@@ -284,7 +284,6 @@
                                                 <option value="coordinador">Coordinador</option>
                                                 <option value="director">Director</option>
                                                 <option value="instructor">Instructor</option>
-                                                <option value="aprendiz">Aprendiz</option>
                                             </select>
                                             <label for="rol">Rol en el Centro</label>
                                         </div>
@@ -559,17 +558,7 @@ $(document).ready(function() {
         const email = $(this).val().trim();
         const username = email.split('@')[0];
         $('#username').val(username);
-        
-        // Validar email SENA
-        const dominiosValidos = ['@sena.edu.co', '@soy.sena.edu.co', '@gmail.com'];
-        if (!dominiosValidos.some(d => email.endsWith(d))) {
-            $('#email').addClass('is-invalid');
-            showAlert('El correo debe ser @sena.edu.co, @soy.sena.edu.co o @gmail.com', 'error');
-        } else {
-            $('#email').removeClass('is-invalid');
-        }
     });
-    
     // Validación de fortaleza de contraseña
     $('#password1').on('input', function() {
         const password = $(this).val();

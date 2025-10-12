@@ -449,26 +449,26 @@
 
 <!-- Modal para Enviar a Revisión -->
 <div class="modal fade" id="modal-enviar-revision" tabindex="-1" aria-labelledby="modalEnviarRevisionLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalEnviarRevisionLabel">Enviar a Revisión</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        ¿Estás seguro de que deseas enviar esta acta a revisión? Los participantes recibirán una notificación para firmar el acta.
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <form action="{% url 'actas:enviar_revision' acta.id %}" method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-paper-plane me-1"></i>Enviar a Revisión
-          </button>
-        </form>
-      </div>
+    <div class="modal-dialog">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="modalEnviarRevisionLabel">Enviar a Revisión</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            ¿Estás seguro de que deseas enviar esta acta a revisión? Los participantes recibirán una notificación para firmar el acta.
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <form action="{% url 'actas:enviar_revision' acta.id %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-1"></i>Enviar a Revisión
+            </button>
+            </form>
+        </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <!-- Modal para Firmar Acta -->
@@ -491,7 +491,7 @@
                 <div class="mb-3">
                     <label for="comentarios-firma" class="form-label">Comentarios (Opcional)</label>
                     <textarea class="form-control" id="comentarios-firma" rows="3"
-                              placeholder="Agregue comentarios adicionales si es necesario..."></textarea>
+                                placeholder="Agregue comentarios adicionales si es necesario..."></textarea>
                 </div>
                 <div class="text-center">
                     <p class="text-muted mb-3">Su firma digital será aplicada automáticamente</p>
@@ -557,6 +557,48 @@ $(document).ready(function() {
 
     // Verificar actualizaciones cada 30 segundos
     setInterval(actualizarProgresoFirmas, 30000);
+});
+$(document).ready(function() {
+    // Cuando se haga clic en el botón "Confirmar Firma"
+    $('#btn-firmar-acta').on('click', function() {
+        const actaId = $('#acta-id').val();
+        const comentarios = $('#comentarios-firma').val();
+
+        $.ajax({
+            url: `/actas/${actaId}/firmar/`,  // Ruta hacia tu vista firmar_acta
+            method: 'POST',
+            data: {
+                comentarios: comentarios,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Mostrar notificación
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Acta firmada!',
+                        text: response.message,
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Atención',
+                        text: response.message
+                    });
+                }
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ocurrió un problema al firmar el acta.'
+                });
+            }
+        });
+    });
 });
 </script>
 {% endblock %}
