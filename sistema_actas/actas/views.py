@@ -12,10 +12,13 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 
+
+
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
 from core.utils import generar_acta_con_ia, enviar_notificacion_participantes
 from notifications.models import Notification
 from accounts.models import User
+
 
 
 # Create your views here.
@@ -594,7 +597,7 @@ def eliminar_acta(request, acta_id):
 
     acta.delete()
     messages.success(request, "El acta ha sido eliminada correctamente.")
-    return redirect("actas:list")
+    return redirect("actas:actas_list")
 
 # ✅ Finalizar Acta
 @login_required

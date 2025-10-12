@@ -15,6 +15,8 @@ urlpatterns = [
     path("settings/", views.settings_view, name="settings"),
     
     path("usuarios/", views.usuarios, name="usuarios"),
+    path('usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
+    path('usuarios/eliminar/<int:user_id>/', views.eliminar_usuario, name='eliminar_usuario'),
     
     # ==========================================================
     # FLUJO DE RECUPERACIÓN DE CONTRASEÑA (RUTAS CORREGIDAS)

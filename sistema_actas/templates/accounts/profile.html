@@ -3,40 +3,150 @@
 {% load static %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="card shadow-lg border-0">
-        <div class="card-header bg-success text-white">
-            <h4 class="mb-0"><i class="fas fa-user-circle me-2"></i>Perfil del Usuario</h4>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h5><strong>{{ user.get_full_name }}</strong></h5>
-                    <p class="text-muted mb-1"><i class="fas fa-envelope me-2"></i>{{ user.email }}</p>
-                    <p class="text-muted mb-1"><i class="fas fa-user-tag me-2"></i>Rol: {{ user.get_rol_display }}</p>
-                    <p class="text-muted mb-1"><i class="fas fa-phone me-2"></i>Teléfono: {{ user.telefono|default:"No registrado" }}</p>
-                    <p class="text-muted mb-1"><i class="fas fa-building me-2"></i>Centro: {{ user.centro }}</p>
-                    <p class="text-muted mb-1"><i class="fas fa-calendar-alt me-2"></i>Registrado el: {{ user.fecha_registro|date:"d/m/Y H:i" }}</p>
-                </div>
+<style>
+    /* === Estilos personalizados === */
+    body {
+        background-color: #f5f7fa;
+    }
 
-                <div class="col-md-4 text-center">
+    .perfil-container {
+        max-width: 900px;
+        margin: 50px auto;
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .perfil-container:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .perfil-header {
+        background-color: #39A900;
+        color: #fff;
+        padding: 25px 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .perfil-header h4 {
+        margin: 0;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .perfil-body {
+        padding: 35px 45px;
+    }
+
+    .perfil-body h5 {
+        font-weight: 700;
+        color: #2d8000;
+        margin-bottom: 10px;
+    }
+
+    .perfil-body p {
+        color: #444;
+        font-size: 15px;
+        margin-bottom: 8px;
+    }
+
+    .perfil-body i {
+        color: #39A900;
+    }
+
+    .firma-digital {
+        text-align: center;
+        background-color: #f9fdf9;
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid #c8e6c9;
+        transition: all 0.3s ease;
+    }
+
+    .firma-digital:hover {
+        background-color: #e8f8e4;
+        transform: scale(1.02);
+    }
+
+    .firma-digital img {
+        border: 2px solid #39A900;
+        border-radius: 8px;
+        max-height: 120px;
+    }
+
+    .firma-digital p {
+        margin-bottom: 10px;
+        font-weight: 600;
+        color: #2d8000;
+    }
+
+    .perfil-actions {
+        text-align: right;
+        padding-top: 10px;
+    }
+
+    .btn-editar {
+        color: #39A900;
+        border: 2px solid #39A900;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 8px 18px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-editar:hover {
+        background-color: #39A900;
+        color: white;
+        transform: scale(1.05);
+    }
+
+    hr {
+        border-color: #d4e9d4;
+        margin-top: 25px;
+        margin-bottom: 15px;
+    }
+</style>
+
+<div class="perfil-container">
+    <div class="perfil-header">
+        <h4><i class="fas fa-user-circle me-2"></i>Perfil del Usuario</h4>
+    </div>
+    <div class="perfil-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5><strong>{{ user.get_full_name }}</strong></h5>
+                <p class="text-muted mb-1"><i class="fas fa-envelope me-2"></i>{{ user.email }}</p>
+                <p class="text-muted mb-1"><i class="fas fa-user-tag me-2"></i>Rol: {{ user.get_rol_display }}</p>
+                <p class="text-muted mb-1"><i class="fas fa-phone me-2"></i>Teléfono: {{ user.telefono|default:"No registrado" }}</p>
+                <p class="text-muted mb-1"><i class="fas fa-building me-2"></i>Centro: {{ user.centro }}</p>
+                <p class="text-muted mb-1"><i class="fas fa-calendar-alt me-2"></i>Registrado el: {{ user.fecha_registro|date:"d/m/Y H:i" }}</p>
+            </div>
+
+            <div class="col-md-4">
+                <div class="firma-digital">
                     {% if user.firma_digital %}
-                        <p><strong>Firma Digital</strong></p>
-                        <img src="{{ user.firma_digital.url }}" alt="Firma digital" class="img-fluid rounded shadow" style="max-height: 120px;">
+                        <p>Firma Digital</p>
+                        <img src="{{ user.firma_digital.url }}" alt="Firma digital" class="img-fluid shadow-sm">
                     {% else %}
                         <p class="text-muted fst-italic">No ha subido una firma digital aún</p>
                     {% endif %}
                 </div>
             </div>
+        </div>
 
-            <hr>
-            <div class="text-end">
-                <a href="{% url 'accounts:settings' %}" class="btn btn-outline-success">
-                    <i class="fas fa-edit me-1"></i> Editar Perfil
-                </a>
-            </div>
+        <hr>
+        <div class="perfil-actions">
+            <a href="{% url 'accounts:settings' %}" class="btn btn-editar">
+                <i class="fas fa-edit me-1"></i> Editar Perfil
+            </a>
         </div>
     </div>
 </div>
 {% endblock %}
+
 

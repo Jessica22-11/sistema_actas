@@ -1,12 +1,68 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
-<div class="container mt-4">
+<style>
+    /* === Estilos personalizados === */
+    body {
+        background-color: #f5f7fa;
+    }
+
+    .compromisos-container {
+        max-width: 800px;
+        margin: 50px auto;
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 30px 40px;
+        transition: all 0.3s ease;
+    }
+
+    .compromisos-container:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    h2 {
+        color: #2d8000; /* tono verde SENA */
+        font-weight: 700;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+
+    .list-group-item {
+        border: none;
+        background-color: #f9fdf9;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .list-group-item:hover {
+        background-color: #e8f8e4;
+        transform: translateX(5px);
+    }
+
+    .empty-item {
+        background-color: #fff3cd;
+        color: #856404;
+        font-weight: 500;
+        text-align: center;
+    }
+</style>
+
+<div class="compromisos-container">
     <h2>Mis Compromisos</h2>
     <ul class="list-group">
         {% for compromiso in compromisos %}
-            <li class="list-group-item">{{ compromiso.descripcion }}</li>
+            <li class="list-group-item">
+                <i class="bi bi-check2-circle text-success me-2"></i>
+                {{ compromiso.descripcion }}
+            </li>
         {% empty %}
-            <li class="list-group-item">No tienes compromisos registrados.</li>
+            <li class="list-group-item empty-item">
+                No tienes compromisos registrados.
+            </li>
         {% endfor %}
     </ul>
 </div>
+{% endblock %}

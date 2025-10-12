@@ -68,13 +68,16 @@ class CustomAuthenticationForm(AuthenticationForm):
 class ProfileUpdateForm(forms.ModelForm):
     password = forms.CharField(
         label="Nueva Contraseña",
-        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Deja vacío si no deseas cambiarla'
+        }),
         required=False
     )
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'telefono', 'firma_digital']
+        fields = ['first_name', 'last_name', 'email', 'telefono', 'firma_digital', 'password']  # 👈 agregamos 'password'
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -83,17 +86,23 @@ class ProfileUpdateForm(forms.ModelForm):
             'firma_digital': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if password and len(password) < 8:
+            raise forms.ValidationError("La contraseña debe tener al menos 8 caracteres.")
+        return password
+
+
     def clean_email(self):
-        email = self.cleaned_data.get("email").lower()
-        user = self.instance
-        
-        if user.rol == 'aprendiz':
-            dominios_validos = ['@soy.sena.edu.co', '@gmail.com']
-        else:
-            dominios_validos = ['@sena.edu.co', '@gmail.com']
-            
-        if not any(email.endswith(d) for d in dominios_validos):
-            raise forms.ValidationError(f"El correo ingresado no es válido para el rol ({user.get_rol_display()}).")
+        email = self.cleaned_data.get('email').lower()
+        dominios_validos = ['@sena.edu.co', '@soy.sena.edu.co', '@gmail.com']
+
+        # ✅ Solo valida si el usuario cambió el correo
+        if email != self.instance.email:
+            if not any(email.endswith(d) for d in dominios_validos):
+                raise forms.ValidationError("El correo debe ser institucional @sena.edu.co o @gmail.com")
+        return email
+
 
     def clean_firma_digital(self):
         firma = self.cleaned_data.get("firma_digital")

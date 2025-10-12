@@ -206,12 +206,13 @@
     <nav class="navbar navbar-expand-lg navbar-dark navbar-sena fixed-top py-2">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'core:dashboard' %}">
-                <i class="fas fa-book-open fs-4"></i>
-                <div>
-                    <span>Sistema de Gestión de Actas</span><br>
+                <img src="{% static 'img/logo_sena.png' %}" alt="Logo SENA" style="height: 40px;">
+                <div class="d-flex flex-column lh-sm">
+                    <span class="fw-bold text-white">Sistema de Gestión de Actas</span>
                     <small class="text-white-50">Centro Minero SENA</small>
                 </div>
             </a>
+
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
