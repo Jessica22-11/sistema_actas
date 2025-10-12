@@ -188,6 +188,8 @@ EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 
+
+
 # Celery + Redis (tareas asincronas)
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://172.25.59.213:6379/0")
 CELERY_RESULT_BACKEND = config(
@@ -226,7 +228,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_TRUSTED_ORIGIN = ["https://localhost:8000", "http://127.0.0.1:8000"]
+CSRF_TRUSTED_ORIGINS = ["https://localhost:8000", "http://127.0.0.1:8000"]
 
 # Logging
 LOGGING = {
@@ -285,3 +287,15 @@ LOGGING = {
 LOGIN_URL = "/accounts/login/"  # Si alguien no está logueado, se manda a /login/
 LOGIN_REDIRECT_URL = "/"  # Después de login va al dashboard (raíz)
 LOGOUT_REDIRECT_URL = "/accounts/login/"  # Después de logout vuelve al login
+
+# ==============================================================================
+# CONFIGURACIÓN DE AUTENTICACIÓN Y SEGURIDAD ADICIONAL
+# ==============================================================================
+
+PASSWORD_RESET_TIMEOUT = 3600 
+PASSWORD_RESET_COMPLETE_URL = '/accounts/login/'
+
+
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-responder@sena.edu.co")
+
+SITE_DOMAIN = config("SITE_DOMAIN", default="127.0.0.1:8000")

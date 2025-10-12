@@ -6,11 +6,44 @@
 
 {% block extra_css %}
 <style>
-    .login-container {
+    /* 1. ESTILO CRUCIAL: Aplicar el fondo y el centrado al cuerpo (body) */
+    /* Este CSS anula cualquier estilo de fondo que tenga el base.html */
+    body {
         min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* Su degradado de fondo */
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; 
+        
+        /* Centrado completo del contenido, requerido para su diseño */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
 
+    /* 2. Esconder cualquier Navbar o Sidebar que pueda tener base.html */
+    /* Busque el selector de su Navbar y Sidebar si existen y póngalo aquí (ejemplo: .main-navbar) */
+    /* .navbar, .sidebar {
+        display: none !important;
+    } */
+
+    /* Estilos para el panel informativo (parte púrpura/azul que se oculta en móviles) */
+    .info-panel {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        color: white;
+        height: 100%;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .info-panel h4, .info-panel h6 { color: white; font-weight: 700; }
+    .info-panel ul { list-style: none; padding-left: 0; margin-top: 1rem; }
+    .info-panel ul li { margin-bottom: 0.5rem; opacity: 0.9; }
+    .info-panel ul li::before {
+        content: "\f00c"; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+        margin-right: 10px; color: var(--sena-green);
+    }
+    /* Estilos de la tarjeta de login y sus elementos */
     .login-card {
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -19,220 +52,140 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
         overflow: hidden;
     }
-
     .login-header {
         background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
-        color: white;
-        text-align: center;
-        padding: 2rem;
+        color: white; text-align: center; padding: 2rem;
     }
-
     .sena-logo {
-        width: 80px;
-        height: 80px;
-        background: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1rem;
-        font-size: 2rem;
-        color: var(--sena-green);
+        width: 80px; height: 80px; background: white; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 1rem; font-size: 2rem; color: var(--sena-green);
     }
-
-    .login-form {
-        padding: 2rem;
-    }
-
-    .form-floating {
-        margin-bottom: 1.5rem;
-    }
-
+    .login-form { padding: 2rem; }
+    .form-floating { margin-bottom: 1.5rem; }
     .form-control {
-        border-radius: 15px;
-        border: 2px solid #e9ecef;
-        padding: 1rem 1.25rem;
-        height: auto;
-        transition: all 0.3s ease;
+        border-radius: 15px; border: 2px solid #e9ecef;
+        padding: 1rem 1.25rem; height: auto; transition: all 0.3s ease;
     }
-
     .form-control:focus {
-        border-color: var(--sena-green);
-        box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
+        border-color: var(--sena-green); box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
     }
-
     .btn-login {
         background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
-        border: none;
-        border-radius: 15px;
-        padding: 1rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: all 0.3s ease;
+        border: none; border-radius: 15px; padding: 1rem; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
     }
-
-    .btn-login:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(57, 169, 0, 0.3);
-    }
-
-    .divider {
-        text-align: center;
-        margin: 2rem 0;
-        position: relative;
-    }
-
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(57, 169, 0, 0.3); }
+    .divider { text-align: center; margin: 2rem 0; position: relative; }
     .divider::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: #e9ecef;
+        content: ''; position: absolute; top: 50%; left: 0; right: 0;
+        height: 1px; background: #e9ecef;
     }
+    .divider span { background: white; padding: 0 1rem; color: #6c757d; position: relative; z-index: 1; }
+    .register-link a { color: var(--sena-green); text-decoration: none; font-weight: 600; }
+    .register-link a:hover { text-decoration: underline; }
 
-    .divider span {
-        background: white;
-        padding: 0 1rem;
-        color: #6c757d;
-    }
-
-    .register-link {
-        text-align: center;
-        margin-top: 1rem;
-    }
-
-    .register-link a {
-        color: var(--sena-green);
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    .register-link a:hover {
-        text-decoration: underline;
-    }
-
+    /* Estilos para las formas flotantes */
     .floating-shapes {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        pointer-events: none;
+        position: absolute; width: 100%; height: 100%;
+        overflow: hidden; pointer-events: none;
     }
-
     .shape {
-        position: absolute;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        animation: float 6s ease-in-out infinite;
+        position: absolute; background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%; animation: float 6s ease-in-out infinite;
     }
-
-    .shape:nth-child(1) {
-        width: 80px;
-        height: 80px;
-        top: 10%;
-        left: 10%;
-        animation-delay: 0s;
-    }
-
-    .shape:nth-child(2) {
-        width: 120px;
-        height: 120px;
-        top: 70%;
-        right: 10%;
-        animation-delay: 2s;
-    }
-
-    .shape:nth-child(3) {
-        width: 60px;
-        height: 60px;
-        bottom: 20%;
-        left: 20%;
-        animation-delay: 4s;
-    }
-
+    .shape:nth-child(1) { width: 80px; height: 80px; top: 10%; left: 10%; animation-delay: 0s; }
+    .shape:nth-child(2) { width: 120px; height: 120px; top: 70%; right: 10%; animation-delay: 2s; }
+    .shape:nth-child(3) { width: 60px; height: 60px; bottom: 20%; left: 20%; animation-delay: 4s; }
     @keyframes float {
         0%, 100% { transform: translateY(0px); }
         50% { transform: translateY(-20px); }
     }
-
     @media (max-width: 768px) {
-        .login-container {
-            padding: 1rem;
-        }
-
-        .login-card {
-            border-radius: 15px;
-        }
-
-        .login-header, .login-form {
-            padding: 1.5rem;
-        }
+        .login-card { border-radius: 15px; }
+        .login-header, .login-form { padding: 1.5rem; }
     }
+    /* --- Estilo para el enlace de recuperar contraseña --- */
+    .forgot-link {
+        color: #0d6efd !important; /* Azul Bootstrap */
+        text-decoration: underline;
+        font-weight: 500;
+        transition: color 0.3s ease;
+    }
+    .forgot-link:hover {
+        color: #084298 !important; /* Azul más oscuro */
+    }
+    /* --- Centrar y estilizar el enlace de registro --- */
+    .register-btn {
+        display: inline-block;
+        color: var(--sena-green);
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    .register-btn:hover {
+        color: var(--sena-dark-green);
+        text-decoration: underline;
+    }
+
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="login-container d-flex align-items-center">
-    <!-- Formas flotantes decorativas -->
-    <div class="floating-shapes">
-        <div class="shape"></div>
-        <div class="shape"></div>
-        <div class="shape"></div>
-    </div>
+<div class="floating-shapes">
+    <div class="shape"></div>
+    <div class="shape"></div>
+    <div class="shape"></div>
+</div>
 
-    <div class="container">
-        <div class="row justify-content-center">
-            <!-- Panel informativo -->
-            <div class="col-lg-4 d-none d-lg-block">
-                <div class="info-panel">
-                    <h4>
-                        <i class="fas fa-file-alt me-2"></i>
-                        Sistema de Actas
-                    </h4>
-                    <p>Transformación digital para la gestión de actas institucionales del Centro Minero SENA.</p>
-                    
-                    <h6>Características:</h6>
-                    <ul>
-                        <li>Procesamiento con Inteligencia Artificial</li>
-                        <li>Firmas digitales seguras</li>
-                        <li>Seguimiento de compromisos</li>
-                        <li>Notificaciones automáticas</li>
-                        <li>Generación de reportes PDF</li>
-                        <li>Silencio administrativo</li>
-                    </ul>
+<div class="container py-5" style="z-index: 10;">
+    <div class="row justify-content-center align-items-center">
+        <div class="col-lg-5 d-none d-lg-block">
+            <div class="info-panel">
+                <h4 class="mb-3">
+                    <i class="fas fa-file-alt me-2"></i>
+                    Sistema de Actas
+                </h4>
+                <p>Transformación digital para la gestión de actas institucionales del Centro Minero SENA.</p>
+                
+                <h6 class="mt-4">Características:</h6>
+                <ul>
+                    <li>Procesamiento con Inteligencia Artificial</li>
+                    <li>Firmas digitales seguras</li>
+                    <li>Seguimiento de compromisos</li>
+                    <li>Notificaciones automáticas</li>
+                    <li>Generación de reportes PDF</li>
+                    <li>Silencio administrativo</li>
+                </ul>
 
-                    <div class="mt-4 p-3 bg-warning bg-opacity-25 rounded">
-                        <h6><i class="fas fa-info-circle me-1"></i> Importante</h6>
-                        <small>Solo funcionarios con email @sena.edu.co pueden acceder al sistema.</small>
-                    </div>
+                <div class="mt-4 p-3 bg-warning bg-opacity-25 rounded" style="color: black;">
+                    <h6><i class="fas fa-info-circle me-1"></i> Importante</h6>
+                    <small>Solo funcionarios con email **@sena.edu.co** pueden acceder al sistema. Se permite temporalmente el ingreso con **@gmail.com**.</small>
                 </div>
             </div>
+        </div>
 
-            <!-- Formulario de login -->
-            <div class="col-lg-5 col-md-8 col-sm-10">
-                <div class="login-card">
-                    <div class="login-header">
-                        <div class="sena-logo">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <h3 class="mb-1">Bienvenido</h3>
-                        <h5 class="mb-0 opacity-75">Sistema de Gestión de Actas</h5>
-                        <small>Centro Minero SENA</small>
+        <div class="col-lg-5 col-md-8 col-sm-10">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="sena-logo">
+                        <i class="fas fa-building"></i>
                     </div>
+                    <h3 class="mb-1">Bienvenido</h3>
+                    <h5 class="mb-0 opacity-75">Sistema de Gestión de Actas</h5>
+                    <small>Centro Minero SENA</small>
+                </div>
 
-                    <div class="login-form">
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
+                <div class="login-form">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
 
                         <form method="post" id="loginForm">
                             {% csrf_token %}
@@ -248,54 +201,61 @@
                                 </div>
                             </div>
 
-                            <div class="form-floating mb-3 position-relative">
-                        {{ form.password }}
-                        <label for="password">
-                            <i class="fas fa-lock me-1"></i>
-                            Contraseña
-                        </label>
-                        <div class="password-toggle" 
-                            style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d;">
-                            <i class="fas fa-eye" id="togglePassword"></i>
-                        </div>
-                    </div>
-
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                                <label class="form-check-label" for="remember">
-                                    Recordar sesión
-                                </label>
+                        <div class="form-floating mb-3 position-relative">
+                            {{ form.password }}
+                            <label for="{{ form.password.id_for_label }}">
+                                <i class="fas fa-lock me-1"></i>
+                                Contraseña
+                            </label>
+                            <div class="password-toggle" 
+                                style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d;">
+                                <i class="fas fa-eye" id="togglePassword"></i>
                             </div>
-
-                            <button type="submit" class="btn btn-primary btn-login w-100">
-                                <span class="login-text">
-                                    <i class="fas fa-sign-in-alt me-2"></i>
-                                    Iniciar Sesión
-                                </span>
-                                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                            </button>
-                        </form>
-
-                        <div class="divider">
-                            <span>¿Primera vez?</span>
                         </div>
 
-                        <div class="register-link">
-                            <a href="{% url 'accounts:register' %}">
-                                <i class="fas fa-user-plus me-1"></i>
-                                Registrarse
-                            </a>
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">
+                                Recordar sesión
+                            </label>
                         </div>
+
+                        <button type="submit" class="btn btn-primary btn-login w-100">
+                            <span class="login-text">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                Iniciar Sesión
+                            </span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        </button>
+                    </form>
+                    
+                    <div class="text-center mt-3 mb-4">
+                        <a href="{% url 'accounts:password_reset' %}" class="forgot-link">
+                            ¿Olvidaste tu contraseña?
+                        </a>
+                    </div>
+
+
+                    <div class="divider">
+                        <span>¿Primera vez?</span>
+                    </div>
+
+                    <div class="register-link text-center mt-3">
+                        <a href="{% url 'accounts:register' %}" class="register-btn">
+                            <i class="fas fa-user-plus me-1"></i>
+                            Registrarse
+                        </a>
+                    </div>
+
                     </div>
                 </div>
+            </div>
 
-                <!-- Información adicional móvil -->
-                <div class="text-center mt-3 d-lg-none">
-                    <small class="text-white-50">
-                        <i class="fas fa-shield-alt me-1"></i>
-                        Conexión segura y cifrada
-                    </small>
-                </div>
+            <div class="text-center mt-3 d-lg-none">
+                <small class="text-white-50">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Conexión segura y cifrada
+                </small>
             </div>
         </div>
     </div>
@@ -305,16 +265,23 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Toggle password visibility
+    // 1. Asignar IDs correctos a los campos de Django/Crispy Forms
+    // Si su formulario usa crispy forms, los IDs serán 'id_username' y 'id_password'
+    // Los reasignamos para que coincidan con su JS: 'email' y 'password'
+    $('#id_username').attr('id', 'email').addClass('form-control');
+    $('#id_password').attr('id', 'password').addClass('form-control');
+
+    // 2. Toggle password visibility
     $('#togglePassword').click(function() {
-        const password = $('#password');
-        const type = password.attr('type') === 'password' ? 'text' : 'password';
-        password.attr('type', type);
+        const passwordField = $('#password');
+        const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
+        passwordField.attr('type', type);
         $(this).toggleClass('fa-eye fa-eye-slash');
     });
 
     // Validación en tiempo real del email (SENA o Gmail)
     // ✅ Validación en tiempo real del email (SENA institucional, aprendiz o Gmail)
+    // 3. Validación en tiempo real del email (SENA o Gmail)
     $('#email').on('input', function() {
         const email = $(this).val().toLowerCase().trim();
         const isValid = (
@@ -335,7 +302,7 @@ $(document).ready(function() {
     });
 
 
-    // Manejo del formulario con loading state
+    // 4. Manejo del formulario con loading state
     $('#loginForm').on('submit', function(e) {
         const $form = $(this);
         const $button = $form.find('button[type="submit"]');
@@ -356,20 +323,17 @@ $(document).ready(function() {
         alert('El correo debe ser institucional (@sena.edu.co o @soy.sena.edu.co) o de Gmail.');
         return false;
 }
+        const email = $('#email').val();
+        if (!(email.endsWith('@sena.edu.co') || email.endsWith('@gmail.com'))) {
+            e.preventDefault();
+            $('#email').addClass('is-invalid').focus();
+            return false;
+        }
 
-        // Mostrar loading state
         $button.prop('disabled', true);
         $text.addClass('d-none');
         $spinner.removeClass('d-none');
-
-        return true;
-    });
-
-    // Efectos visuales en los campos
-    $('.form-control').on('focus', function() {
-        $(this).parent().addClass('focused');
-    }).on('blur', function() {
-        $(this).parent().removeClass('focused');
+        return true; 
     });
 });
 </script>
