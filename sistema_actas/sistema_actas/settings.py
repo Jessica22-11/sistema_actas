@@ -10,12 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import os  # Modulo para interpretar el sistema operativo
-from decouple import config  # Permite manejar variables de entorno desde .env
-from pathlib import Path  # Para manejanvr rutas del sistema de forma segura
+import os # Modulo para interpretar el sistema operativo
+from decouple import config # Permite manejar variables de entorno desde .env
+from pathlib import Path # Para manejanvr rutas del sistema de forma segura
 
 LOGS_DIR = os.path.join("logs")
-os.makedirs(LOGS_DIR, exist_ok=True)  # crea la carpeta automáticamente si no existe
+os.makedirs(LOGS_DIR, exist_ok=True) # crea la carpeta automáticamente si no existe
 
 
 # Base del proyecto
@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# See https://docs.com/en/5.2/howto/deployment/checklist/
 
 # Clave secreta para seguridad de Django(lee desde .env)
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-production")
@@ -159,7 +159,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+# https://docs.djangoproject.com/en5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -181,13 +181,17 @@ CKEDITOR_CONFIGS = {
 }
 
 # Configuracion de Email
+# ====================================================================
+# CONFIGURACIÓN FINAL: Forzando SMTP para envío real de correos.
+# ====================================================================
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-
 
 
 # Celery + Redis (tareas asincronas)
@@ -293,7 +297,7 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"  # Después de logout vuelve al login
 # ==============================================================================
 
 PASSWORD_RESET_TIMEOUT = 3600 
-PASSWORD_RESET_COMPLETE_URL = '/accounts/login/'
+PASSWORD_RESET_COMPLETE_URL = '/accounts/login/' 
 
 
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-responder@sena.edu.co")

@@ -5,40 +5,90 @@
 {% block title %}Registro - Sistema de Actas SENA{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/login.css' %}">
 <style>
+    :root {
+        --sena-green: #39A900;
+        --sena-dark-green: #2d8000;
+    }
+
+    .login-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+    }
+
+    .login-card {
+        width: 100%;
+        max-width: 850px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(8px);
+        border-radius: 20px;
+        box-shadow: 0 25px 45px rgba(0,0,0,0.15);
+        overflow: hidden;
+        margin: auto;
+    }
+
+    .login-header {
+        background: linear-gradient(135deg, var(--sena-green), var(--sena-dark-green));
+        color: white;
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    .sena-logo {
+        width: 75px;
+        height: 75px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        color: var(--sena-green);
+        font-size: 2rem;
+    }
+
+    .login-form {
+        padding: 2rem;
+    }
+
+    .form-floating {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-control, .form-select {
+        border-radius: 12px;
+        border: 2px solid #dee2e6;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--sena-green);
+        box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
+    }
+
     .register-steps {
         display: flex;
         justify-content: center;
-        margin-bottom: 2rem;
-        padding: 0 2rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 0.8rem;
     }
 
     .step {
         flex: 1;
         text-align: center;
+        min-width: 80px;
         position: relative;
-        padding: 0 1rem;
-    }
-
-    .step:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        top: 15px;
-        right: -50%;
-        width: 100%;
-        height: 2px;
-        background: #e9ecef;
-        z-index: 1;
-    }
-
-    .step.completed:not(:last-child)::after {
-        background: var(--sena-green);
     }
 
     .step-number {
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         background: #e9ecef;
         color: #6c757d;
@@ -46,47 +96,34 @@
         align-items: center;
         justify-content: center;
         font-weight: 600;
-        margin-bottom: 0.5rem;
-        position: relative;
-        z-index: 2;
-        transition: all 0.3s ease;
+        margin-bottom: 0.3rem;
     }
 
-    .step.active .step-number {
-        background: var(--sena-green);
-        color: white;
-    }
-
+    .step.active .step-number,
     .step.completed .step-number {
         background: var(--sena-green);
-        color: white;
+        color: #fff;
     }
 
     .signature-upload {
         border: 2px dashed #dee2e6;
-        border-radius: 10px;
+        border-radius: 12px;
         padding: 2rem;
         text-align: center;
-        transition: all 0.3s ease;
         cursor: pointer;
+        transition: all 0.3s ease;
     }
 
     .signature-upload:hover {
         border-color: var(--sena-green);
-        background: rgba(57, 169, 0, 0.05);
-    }
-
-    .signature-upload.dragover {
-        border-color: var(--sena-green);
-        background: rgba(57, 169, 0, 0.1);
+        background: rgba(57,169,0,0.05);
     }
 
     .signature-preview {
-        max-width: 300px;
-        max-height: 150px;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
+        max-width: 280px;
+        max-height: 120px;
         margin-top: 1rem;
+        border-radius: 8px;
     }
 
     .form-step {
@@ -95,21 +132,84 @@
 
     .form-step.active {
         display: block;
-        animation: fadeInRight 0.5s ease-out;
+        animation: fadeIn 0.4s ease;
     }
 
-    @keyframes fadeInRight {
-        from {
-            opacity: 0;
-            transform: translateX(20px);
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== Responsividad ===== */
+    @media (max-width: 992px) {
+        .login-card {
+            max-width: 95%;
         }
-        to {
-            opacity: 1;
-            transform: translateX(0);
+
+        .login-form {
+            padding: 1.5rem;
+        }
+
+        .register-steps {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .step small {
+            font-size: 0.8rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .login-header {
+            padding: 1.5rem;
+        }
+
+        .login-form {
+            padding: 1.25rem;
+        }
+
+        .sena-logo {
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+        }
+
+        .btn {
+            font-size: 0.9rem;
+            padding: 0.75rem 1rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .login-container {
+            padding: 1rem;
+        }
+
+        .login-card {
+            border-radius: 12px;
+        }
+
+        .form-floating label {
+            font-size: 0.9rem;
+        }
+
+        .step small {
+            display: none;
+        }
+
+        .form-control, .form-select {
+            padding: 0.8rem;
+        }
+
+        .btn {
+            font-size: 0.85rem;
+            padding: 0.6rem;
         }
     }
 </style>
 {% endblock %}
+
 
 {% block content %}
 <div class="login-container d-flex align-items-center">
@@ -246,14 +346,18 @@
                                 <h5 class="mb-3">Firma Digital</h5>
                                 <p class="text-muted mb-4">Suba su firma digital para uso en las actas</p>
 
-                                <div class="signature-upload" id="signature-upload">
+                                <div class="signature-upload position-relative" id="signature-upload">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                                     <h6>Arrastra tu firma aquí o haz clic para seleccionar</h6>
                                     <p class="text-muted mb-0">Formatos: PNG, JPG, GIF (máx. 2MB)</p>
-                                    <input type="file" class="d-none" id="firma_digital" name="firma_digital" 
-                                            accept="image/*">
+
+                                    <!-- Input ahora ocupa todo el área clickeable -->
+                                    <input type="file" id="firma_digital" name="firma_digital"
+                                        accept="image/*"
+                                        style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;">
                                 </div>
 
+                                <!-- Vista previa -->
                                 <div id="signature-preview" class="text-center" style="display: none;">
                                     <img id="preview-image" class="signature-preview" alt="Vista previa de firma">
                                     <br>
@@ -326,6 +430,7 @@
 {% endblock %}
 
 {% block extra_js %}
+
 <script>
 let currentStep = 1;
 const totalSteps = 4;
@@ -463,32 +568,34 @@ $(document).ready(function() {
     });
     
     // Manejo de carga de firma
-    $('#signature-upload').on('click', function() {
-        $('#firma_digital').click();
+    // ✅ Manejo seguro de carga de firma digital (compatible con pasos dinámicos)
+    $(document).on('click', '#signature-upload', function () {
+        $('#firma_digital').trigger('click');
     });
-    
-    $('#firma_digital').on('change', function(e) {
-        handleSignatureUpload(e.target.files[0]);
+
+    $(document).on('change', '#firma_digital', function (e) {
+        const file = e.target.files[0];
+        handleSignatureUpload(file);
     });
-    
     // Drag & Drop para firma
-    $('#signature-upload')
-        .on('dragover', function(e) {
-            e.preventDefault();
-            $(this).addClass('dragover');
-        })
-        .on('dragleave', function(e) {
-            e.preventDefault();
-            $(this).removeClass('dragover');
-        })
-        .on('drop', function(e) {
-            e.preventDefault();
-            $(this).removeClass('dragover');
-            const files = e.originalEvent.dataTransfer.files;
-            if (files.length > 0) {
-                handleSignatureUpload(files[0]);
-            }
-        });
+    $(document).on('dragover', '#signature-upload', function (e) {
+    e.preventDefault();
+    $(this).addClass('dragover');
+    });
+
+    $(document).on('dragleave', '#signature-upload', function (e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+    });
+
+    $(document).on('drop', '#signature-upload', function (e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length > 0) {
+            handleSignatureUpload(files[0]);
+        }
+    });
 });
 
 function updatePasswordStrength(password) {

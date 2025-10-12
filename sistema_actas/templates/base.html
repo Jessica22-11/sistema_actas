@@ -1,307 +1,152 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sistema de Gestión de Actas - Centro Minero SENA{% endblock %}</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{% load static %}{% static 'img/favicon.ico' %}">
-    
-    <!-- Bootstrap 5 CSS -->
+
+    {% load static %}
+    <link rel="icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
+
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
+
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Custom CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --sena-green: #39A900;
             --sena-dark-green: #2d8000;
             --sena-light-green: #e8f5e8;
-            --primary-blue: #0066cc;
-            --secondary-gray: #6c757d;
-            --light-gray: #f8f9fa;
-            --border-color: #dee2e6;
-            --text-dark: #212529;
-            --text-muted: #6c757d;
-            --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            --border-radius: 0.5rem;
-        }
-
-        * {
-            font-family: 'Inter', sans-serif;
+            --text-dark: #1a1a1a;
         }
 
         body {
-            background-color: #f5f7fa;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
             color: var(--text-dark);
-            line-height: 1.6;
         }
 
-        .navbar-brand {
-            font-weight: 700;
-            color: white !important;
-        }
-
+        /* ===== NAVBAR ===== */
         .navbar-sena {
-            background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
-            box-shadow: var(--shadow-md);
-            padding: 1rem 0;
+            background: linear-gradient(135deg, var(--sena-green), var(--sena-dark-green));
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
 
-        .btn-primary {
-            background-color: var(--sena-green);
-            border-color: var(--sena-green);
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--sena-dark-green);
-            border-color: var(--sena-dark-green);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-outline-primary {
-            color: var(--sena-green);
-            border-color: var(--sena-green);
-        }
-
-        .btn-outline-primary:hover {
-            background-color: var(--sena-green);
-            border-color: var(--sena-green);
-        }
-
-        .card {
-            border: none;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        .card:hover {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-bottom: 1px solid var(--border-color);
+        .navbar-sena .navbar-brand {
             font-weight: 600;
         }
 
-        .stats-card {
-            background: linear-gradient(135deg, white 0%, #f8f9fa 100%);
-            border-left: 4px solid var(--sena-green);
+        .navbar-sena .dropdown-menu {
+            font-size: 0.9rem;
         }
 
-        .stats-card .stats-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--sena-green);
-        }
-
+        /* ===== SIDEBAR ===== */
         .sidebar {
-            background: white;
-            min-height: calc(100vh - 76px);
-            box-shadow: var(--shadow-sm);
-            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            position: fixed;
+            top: 76px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 76px);
+            background-color: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+            overflow-y: auto;
+            padding: 1rem 0;
+        }
+
+        .sidebar h6 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin: 1rem 1rem 0.5rem;
         }
 
         .sidebar .nav-link {
-            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            color: #333;
             font-weight: 500;
-            padding: 0.75rem 1.5rem;
-            margin: 0.25rem 0;
-            border-radius: var(--border-radius);
-            transition: all 0.3s ease;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            margin: 0.1rem 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar .nav-link i {
+            width: 22px;
+            margin-right: 10px;
+            font-size: 1rem;
         }
 
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
             background-color: var(--sena-light-green);
             color: var(--sena-dark-green);
-            transform: translateX(4px);
+            transform: translateX(3px);
         }
 
-        .sidebar .nav-link i {
-            width: 20px;
-            margin-right: 0.75rem;
+        /* ===== MAIN CONTENT ===== */
+    .main-content {
+    /* Por defecto sin margen izquierdo (evita huecos cuando NO hay sidebar) */
+    margin-left: 0;
+    padding: 2rem;
+    padding-top: calc(var(--navbar-height, 76px) + 1rem); /* espacio bajo el navbar fijo */
+    transition: margin-left 0.25s ease;
+    min-height: calc(100vh - var(--navbar-height, 76px));
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+    /* Si hay sidebar (aplicar esta clase desde el template), entonces sí dejar margen */
+    .main-content.with-sidebar {
+        margin-left: 240px;
+    }
+
+    /* Mobile: quitar margen fijo y ajustar paddings */
+    @media (max-width: 992px) {
+        .main-content,
+        .main-content.with-sidebar {
+            margin-left: 0;
+            padding-top: calc(var(--navbar-height, 76px) + 0.75rem);
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
+    }
 
-        .badge-estado {
-            font-weight: 500;
-            padding: 0.5rem 0.75rem;
-            border-radius: 20px;
-        }
-
-        .badge-borrador { background-color: #ffc107; color: #000; }
-        .badge-en-revision { background-color: #17a2b8; color: white; }
-        .badge-finalizada { background-color: #28a745; color: white; }
-        .badge-archivada { background-color: #6c757d; color: white; }
-
-        .table-custom {
-            background: white;
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .table-custom th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border-color);
-            color: var(--text-dark);
-        }
-
-        .table-custom tbody tr {
-            transition: all 0.3s ease;
-        }
-
-        .table-custom tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .progress-custom {
-            height: 8px;
-            background-color: #e9ecef;
-            border-radius: 10px;
-        }
-
-        .progress-custom .progress-bar {
-            background: linear-gradient(90deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
-            border-radius: 10px;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background-color: #dc3545;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
+        .btn-primary {
+            background-color: var(--sena-green);
             border-color: var(--sena-green);
-            box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--sena-dark-green);
+            border-color: var(--sena-dark-green);
         }
 
         .alert-custom {
-            border: none;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .loading-spinner {
-            display: none;
-        }
-
-        .loading .loading-spinner {
-            display: inline-block;
-        }
-
-        .ai-processing {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            border: 1px solid #2196f3;
-            border-radius: var(--border-radius);
-            padding: 1rem;
-            text-align: center;
-            margin: 1rem 0;
-        }
-
-        .signature-pad {
-            border: 2px dashed var(--border-color);
-            border-radius: var(--border-radius);
-            background-color: #f8f9fa;
-            min-height: 150px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .signature-pad:hover {
-            border-color: var(--sena-green);
-            background-color: var(--sena-light-green);
-        }
-
-        .main-content {
-            padding: 2rem 0;
-            min-height: calc(100vh - 76px);
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                display: none;
-            }
-            
-            .main-content {
-                padding: 1rem 0;
-            }
-
-            .stats-card .stats-number {
-                font-size: 2rem;
-            }
-        }
-
-        /* Animaciones */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .fade-in-up {
-            animation: fadeInUp 0.6s ease-out;
-        }
-
-        .stagger-1 { animation-delay: 0.1s; }
-        .stagger-2 { animation-delay: 0.2s; }
-        .stagger-3 { animation-delay: 0.3s; }
-        .stagger-4 { animation-delay: 0.4s; }
-
-        /* Efectos hover mejorados */
-        .hover-lift {
-            transition: all 0.3s ease;
-        }
-
-        .hover-lift:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            font-size: 0.95rem;
         }
     </style>
-    
+
     {% block extra_css %}{% endblock %}
 </head>
-<body class="h-full">
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-sena fixed-top">
+
+<body>
+    <!-- ===== NAVBAR ===== -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-sena fixed-top py-2">
         <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'core:dashboard' %}">
-                <i class="fas fa-building me-2"></i>
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'core:dashboard' %}">
+                <i class="fas fa-book-open fs-4"></i>
                 <div>
-                    <div>Sistema de Gestión de Actas</div>
-                    <small style="font-size: 0.75rem; opacity: 0.9;">Centro Minero SENA</small>
+                    <span>Sistema de Gestión de Actas</span><br>
+                    <small class="text-white-50">Centro Minero SENA</small>
                 </div>
             </a>
 
@@ -309,166 +154,81 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    {% if user.is_authenticated %}
-                        <li class="nav-item dropdown me-3">
-                            <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-bell"></i>
-                                {% if notifications_count > 0 %}
-                                    <span class="notification-badge">{{ notifications_count }}</span>
-                                {% endif %}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" style="width: 350px;">
-                                <li class="dropdown-header d-flex justify-content-between align-items-center">
-                                    <span>Notificaciones</span>
-                                    <small class="text-muted">{{ notifications_count }} nuevas</small>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                {% for notification in user_notifications %}
-                                    <li>
-                                        <a class="dropdown-item py-2" href="{{ notification.get_url }}">
-                                            <div class="d-flex">
-                                                <div class="me-2">
-                                                    <i class="fas fa-{{ notification.get_icon }} text-{{ notification.get_color }}"></i>
-                                                </div>
-                                                <div class="flex-grow-1">
-                                                    <div class="fw-semibold">{{ notification.titulo }}</div>
-                                                    <small class="text-muted">{{ notification.mensaje|truncatechars:50 }}</small>
-                                                    <br><small class="text-muted">{{ notification.fecha_creacion|timesince }} ago</small>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    </li>
-                                {% empty %}
-                                    <li><span class="dropdown-item-text">No hay notificaciones nuevas</span></li>
-                                {% endfor %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-center" href="{% url 'notifications:list' %}">Ver todas las notificaciones</a></li>
-                            </ul>
-                        </li>
-
-                        <!-- Usuario -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                                {% if user.firma_digital %}
-                                    <img src="{{ user.firma_digital.url }}" alt="Avatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
-                                {% else %}
-                                    <i class="fas fa-user-circle me-2" style="font-size: 1.5rem;"></i>
-                                {% endif %}
-                                <div class="text-start">
-                                    <div style="font-size: 0.9rem;">{{ user.get_full_name }}</div>
-                                    <small style="font-size: 0.75rem; opacity: 0.9;">{{ user.get_rol_display }}</small>
-                                </div>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <span class="dropdown-item-text">
-                                        <strong>{{ user.get_full_name }}</strong><br>
-                                        <small class="text-muted">{{ user.email }}</small><br>
-                                        <small class="text-muted">{{ user.centro }}</small>
-                                    </span>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
-                                    <i class="fas fa-user me-2"></i>Mi Perfil
-                                </a></li>
-                                <li><a class="dropdown-item" href="{% url 'accounts:settings' %}">
-                                    <i class="fas fa-cog me-2"></i>Configuración
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
-                                </a></li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'accounts:login' %}">Iniciar Sesión</a>
-                        </li>
-                    {% endif %}
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                {% if user.is_authenticated %}
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                            {% if user.firma_digital %}
+                                <img src="{{ user.firma_digital.url }}" class="rounded-circle me-2" style="width:32px;height:32px;object-fit:cover;">
+                            {% else %}
+                                <i class="fas fa-user-circle fs-4 me-2"></i>
+                            {% endif %}
+                            <span>{{ user.first_name }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:settings' %}"><i class="fas fa-cog me-2"></i>Configuración</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Salir</a></li>
+                        </ul>
+                    </li>
                 </ul>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}" class="btn btn-light btn-sm">Iniciar Sesión</a>
+                {% endif %}
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div style="margin-top: 76px;">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="main-content">
-                    {% if messages %}
-                        <div class="container-fluid mb-3">
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }} alert-dismissible alert-custom fade show" role="alert">
-                                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% elif message.tags == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+    <!-- ===== SIDEBAR (solo autenticado) ===== -->
+    {% if user.is_authenticated %}
+    <aside class="sidebar">
+        <h6>Menú Principal</h6>
+        <nav class="nav flex-column">
+            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
+                <i class="fas fa-home"></i>Inicio
+            </a>
+            <a class="nav-link" href="{% url 'actas:actas_list' %}">
+                <i class="fas fa-file-alt"></i>Mis Actas
+            </a>
+            <a class="nav-link" href="{% url 'actas:crear' %}">
+                <i class="fas fa-plus-circle"></i>Nueva Acta
+            </a>
+            <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
+                <i class="fas fa-signature"></i>Firmas Pendientes
+            </a>
+            <a class="nav-link" href="{% url 'actas:mis_compromisos' %}">
+                <i class="fas fa-tasks"></i>Compromisos
+            </a>
+            {% if user.is_staff %}
+            <hr>
+            <h6>Administración</h6>
+            <a class="nav-link" href="{% url 'accounts:usuarios' %}">
+                <i class="fas fa-users"></i>Usuarios
+            </a>
+            <a class="nav-link" href="{% url 'admin:index' %}">
+                <i class="fas fa-tools"></i>Panel Admin
+            </a>
+            {% endif %}
+        </nav>
+    </aside>
+    {% endif %}
 
-                    {% block content %}
-                        {% if user.is_authenticated %}
-                            <div class="row">
-                                <!-- Sidebar -->
-                                <div class="col-md-3 col-lg-2 px-0">
-                                    <div class="sidebar">
-                                        <div class="p-3">
-                                            <nav class="nav flex-column">
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
-                                                    href="{% url 'core:dashboard' %}">
-                                                    <i class="fas fa-tachometer-alt"></i>Dashboard
-                                                </a>
-                                                <a class="nav-link {% if 'actas' in request.resolver_match.namespace %}active{% endif %}" 
-                                                    href="{% url 'actas:actas_list' %}">
-                                                    <i class="fas fa-file-alt"></i>Mis Actas
-                                                </a>
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'crear_acta' %}active{% endif %}" 
-                                                    href="{% url 'actas:crear' %}">
-                                                    <i class="fas fa-plus-circle"></i>Nueva Acta
-                                                </a>
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'mis_compromisos' %}active{% endif %}" 
-                                                    href="{% url 'actas:mis_compromisos' %}">
-                                                    <i class="fas fa-tasks"></i>Compromisos
-                                                </a>
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'firmas_pendientes' %}active{% endif %}" 
-                                                    href="{% url 'actas:firmas_pendientes' %}">
-                                                    <i class="fas fa-signature"></i>Firmas Pendientes
-                                                </a>
-                                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"  
-                                                    href="{% url 'core:dashboard' %}">
-                                                    <i class="fas fa-chart-bar"></i>Reportes
-                                                </a>
-                                                
-                                                {% if user.is_staff %}
-                                                    <hr>
-                                                    <small class="text-muted px-3">ADMINISTRACIÓN</small>
-                                                    <a class="nav-link" href="{% url 'admin:index' %}">
-                                                        <i class="fas fa-tools"></i>Panel Admin
-                                                    </a>
-                                                    <a class="nav-link" href="{% url 'accounts:usuarios' %}">
-                                                        <i class="fas fa-users"></i>Usuarios
-                                                    </a>
-                                                {% endif %}
-                                            </nav>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Contenido principal -->
-                                <div class="col-md-9 col-lg-10">
-                                    <!-- Aquí irán las vistas autenticadas -->
-                                </div>
-                            </div>
-                        {% else %}
-                            <!-- Aquí irán las vistas de login y registro -->
-                        {% endif %}
-                    {% endblock %}
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+    <main class="main-content {% if user.is_authenticated %}with-sidebar{% endif %}">
+        {% if messages %}
+        <div class="container mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-custom">
+                    <i class="fas fa-info-circle me-2"></i> {{ message }}
                 </div>
-            </div>
+            {% endfor %}
         </div>
-    </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

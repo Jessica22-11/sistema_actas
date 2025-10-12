@@ -12,9 +12,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 
-from .models import Acta, Participante, Firma, Compromiso
+from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
 from core.utils import generar_acta_con_ia, enviar_notificacion_participantes
 from notifications.models import Notification
+from accounts.models import User
 
 
 # Create your views here.
@@ -41,6 +42,9 @@ def detalle_acta(request, acta_id):
         acta.estado == "en_revision"
         and acta.firmas.filter(usuario=request.user, firmado=False).exists()
     )
+    
+    if request.user.rol == 'aprendiz':
+        compromisos = compromisos.filter(responsable=request.user)
 
     context = {
         "acta": acta,
@@ -48,11 +52,22 @@ def detalle_acta(request, acta_id):
         "firmas": firmas,
         "compromisos": compromisos,
         "puede_firmar": puede_firmar,
-        "puede_editar": acta.creador == request.user and acta.estado == "borrador",
-        "puede_enviar_revision": acta.creador == request.user
-        and acta.estado == "borrador",
-        "puede_finalizar": acta.creador == request.user
-        and acta.estado == "en_revision",
+        "puede_editar": (
+            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
+            and acta.creador == request.user
+            and acta.estado == "borrador"
+        ),
+        "puede_enviar_revision": (
+            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
+            and acta.creador == request.user
+            and acta.estado == "borrador"
+        ),
+        "puede_finalizar": (
+            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
+            and acta.creador == request.user
+            and acta.estado == "en_revision"
+            ),
+        'puede_comentar': request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director', 'aprendiz'],
     }
 
     return render(request, "actas/detalle.html", context)
@@ -61,6 +76,10 @@ def detalle_acta(request, acta_id):
 @login_required
 def editar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id, creador=request.user)
+    
+    if request.user.rol == 'aprendiz':
+        messages.error(request, "No tienes permisos para editar esta acta.")
+        return redirect("actas:list")
 
     if acta.estado != "borrador":
         messages.error(request, "Solo de pueden editar actas en estado de borrador.")
@@ -149,6 +168,11 @@ def editar_acta(request, acta_id):
 @require_POST
 def firmar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
+    
+    if not acta.participantes.filter(usuario=request.user).exists():
+        return JsonResponse(
+            {"success": False, "message": "No eres participante de esta acta."}
+        )
 
     try:
         firma = Firma.objects.get(acta=acta, usuario=request.user)
@@ -455,10 +479,19 @@ def actas_list(request):
     tipo = request.GET.get('tipo')
     search = request.GET.get('search')
     
-    actas = Acta.objects.filter(
-        Q(creador=request.user) | Q(participantes__usuario=request.user)
-    ).distinct()
+    if request.user.rol == 'aprendiz':
+        actas = Acta.objects.filter(participantes__usuario=request.user).distinct()
+        
+    elif request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']:
+        actas = Acta.objects.filter(
+            Q(creador=request.user) | Q(participantes__usuario=request.user)
+        ). distinct()
     
+    elif request.user.rol == 'admin' or request.user.is_superuser:
+        actas = Acta.objects.all()
+    else:
+        actas = Acta.objects.none()
+        
     if estado:
         actas = actas.filter(estado=estado)
     if tipo:
@@ -483,13 +516,19 @@ def actas_list(request):
             'estado': estado,
             'tipo': tipo,
             'search': search,
-        }
+        },
+        'es_aprendiz': request.user.rol == "aprendiz",
     }
     
     return render(request, 'actas/actas_list.html', context)
 
 @login_required
 def crear_acta(request):
+    
+    if request.user.rol == 'aprendiz':
+        messages.error(request, "No tienes permisos para crear actas.")
+        return redirect("actas:list")
+    
     if request.method == 'POST':
         # Procesar con IA si se proporciona resumen
         resumen = request.POST.get('resumen_reunion', '').strip()
@@ -555,6 +594,10 @@ def eliminar_acta(request, acta_id):
 @permission_required("actas.can_finalize_acta", raise_exception=True)
 def finalizar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
+    
+    if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
+        messages.error(request, "No tienes permisos para finalizar actas.")
+        return redirect("actas:detalle", acta_id=acta.id)
 
     if acta.estado not in ["borrador", "en_revision"]:
         messages.warning(request, "El acta no se puede finalizar en este estado.")
@@ -577,6 +620,10 @@ def finalizar_acta(request, acta_id):
 @permission_required("actas.can_archive_acta", raise_exception=True)
 def archivar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
+    
+    if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
+        messages.error(request, "No tienes permisos para archivar actas.")
+        return redirect("actas:detalle", acta_id=acta.id)
 
     if acta.estado != "finalizada":
         messages.warning(request, "Solo las actas finalizadas se pueden archivar.")
@@ -642,3 +689,18 @@ def eliminar_compromiso(request, compromiso_id):
 def mis_compromisos(request):
     compromisos = Compromiso.objects.all()  # luego lo puedes filtrar por usuario
     return render(request, "actas/mis_compromisos.html", {"compromisos": compromisos})
+
+@login_required
+@require_POST
+def agregar_comentario(request, acta_id):
+    acta = get_object_or_404(Acta, id=acta_id)
+
+    if request.user.rol != "aprendiz":
+        return JsonResponse({"success": False, "message": "Solo los aprendices pueden comentar."})
+
+    texto = request.POST.get("comentario", "").strip()
+    if not texto:
+        return JsonResponse({"success": False, "message": "El comentario no puede estar vacío."})
+
+    ComentarioActa.objects.create(acta=acta, autor=request.user, texto=texto)
+    return JsonResponse({"success": True, "message": "Comentario agregado correctamente."})
