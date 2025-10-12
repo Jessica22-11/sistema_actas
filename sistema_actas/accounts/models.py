@@ -41,17 +41,25 @@ class User (AbstractUser) :
         super().clean()
         
         if self.rol == 'aprendiz':
-            dominos_validos = ['@soy.sena.edu.co', '@gmail.com']
-            if not any(self.email.endswith(d) for d in dominos_validos):
-                raise ValidationError("El correo del aprendiz debe ser institucional @soy.sena.edu.co o @gmail.com")
-            elif self.rol in ['funcionario', 'coordinador', 'director', 'instructor']:
-                dominos_validos = ['@sena.edu.co', '@gmail.com']
-                if not any(self.email.endswith(d) for d in dominos_validos):
-                    raise ValidationError("El correo debe ser institucional @sena.edu.co o @gmail.com")
-                
-            if self.rol =='admin' and not (self.is_staff and self.is_superuser):
-                raise ValidationError("Solo los super ususarios pueden tener el rol de Administrador")
+            dominios_validos = ['@soy.sena.edu.co', '@gmail.com']
+            if not any(self.email.endswith(d) for d in dominios_validos):
+                raise ValidationError(
+                "El correo del aprendiz debe ser institucional @soy.sena.edu.co o @gmail.com"
+                )
 
+        # 🔹 Validación para funcionarios, coordinadores, directores e instructores
+        elif self.rol in ['funcionario', 'coordinador', 'director', 'instructor']:
+            dominios_validos = ['@sena.edu.co', '@gmail.com']
+            if not any(self.email.endswith(d) for d in dominios_validos):
+                raise ValidationError(
+                    "El correo debe ser institucional @sena.edu.co o @gmail.com"
+                )
+
+        # 🔹 Validación especial para administradores
+        elif self.rol == 'admin' and not (self.is_staff and self.is_superuser):
+            raise ValidationError(
+                "Solo los superusuarios pueden tener el rol de Administrador"
+            )
     #Guardado Personalizado
     def save (self, *args, **kwargs):
         #Redimensionar firma digital si es muy grade

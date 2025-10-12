@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="text-align:center; margin-top:50px;">
+  <h2>Generar copia de seguridad del sistema</h2>
+  <form action="{% url 'generar_backup' %}" method="get">
+    <button type="submit" class="btn btn-success">💾 Generar Backup</button>
+  </form>
+</div>
+{% endblock %}

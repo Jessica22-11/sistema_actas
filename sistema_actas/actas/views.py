@@ -739,4 +739,3 @@ def aprendiz_compromisos(request):
         'titulo': "Mis compromisos asignados"
     }
     return render(request, 'actas/aprendiz/compromisos.html', context)
-
