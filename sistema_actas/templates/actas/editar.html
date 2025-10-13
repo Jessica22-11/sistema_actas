@@ -87,6 +87,41 @@
             transform: translateY(0);
         }
     }
+
+    /* Estilos para participantes y compromisos */
+    .participante-item, .compromiso-item {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+
+    .btn-remove {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        cursor: pointer;
+    }
+
+    .btn-remove:hover {
+        background-color: #c82333;
+    }
+
+    .btn-add {
+        background-color: var(--sena-green);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 20px;
+        cursor: pointer;
+    }
+
+    .btn-add:hover {
+        background-color: var(--sena-dark-green);
+    }
 </style>
 {% endblock %}
 
@@ -168,6 +203,52 @@
                     </div>
                 </div>
 
+                <!-- NUEVA SECCIÓN: PARTICIPANTES -->
+                <div class="card hover-lift mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-users me-2"></i>Participantes</h5>
+                        <button type="button" class="btn btn-sm btn-light" onclick="agregarParticipante()">
+                            <i class="fas fa-plus me-1"></i>Agregar Participante
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="participantes-container">
+                            {% for participante in participantes %}
+                            <div class="participante-item mb-3">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-6">
+                                        <select class="form-select" name="participantes" required>
+                                            <option value="">Seleccione un usuario</option>
+                                            {% for usuario in usuarios %}
+                                                <option value="{{ usuario.email }}" 
+                                                    {% if participante.usuario.email == usuario.email %}selected{% endif %}>
+                                                    {{ usuario.get_full_name }} ({{ usuario.email }})
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <input type="text" class="form-control" 
+                                               name="rol_{{ participante.usuario.email }}" 
+                                               placeholder="Rol en la reunión"
+                                               value="{{ participante.rol_en_reunion }}">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-remove btn-sm" onclick="this.parentElement.parentElement.parentElement.remove()">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Los participantes recibirán una notificación cuando envíes el acta a revisión
+                        </small>
+                    </div>
+                </div>
+
                 <!-- Orden del Día -->
                 <div class="card hover-lift mb-4">
                     <div class="card-header">
@@ -187,6 +268,53 @@
                     <div class="card-body">
                         <textarea class="form-control" id="desarrollo" name="desarrollo" rows="8"
                                   placeholder="Describe el desarrollo completo de la reunión...">{{ acta.desarrollo }}</textarea>
+                    </div>
+                </div>
+
+                <!-- NUEVA SECCIÓN: COMPROMISOS -->
+                <div class="card hover-lift mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-tasks me-2"></i>Compromisos</h5>
+                        <button type="button" class="btn btn-sm btn-light" onclick="agregarCompromiso()">
+                            <i class="fas fa-plus me-1"></i>Agregar Compromiso
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="compromisos-container">
+                            {% for compromiso in compromisos %}
+                            <div class="compromiso-item mb-3">
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <textarea class="form-control" 
+                                                  name="compromiso_desc_{{ forloop.counter }}" 
+                                                  placeholder="Descripción del compromiso" 
+                                                  rows="2" required>{{ compromiso.descripcion }}</textarea>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select class="form-select" name="compromiso_resp_{{ forloop.counter }}" required>
+                                            <option value="">Responsable</option>
+                                            {% for usuario in usuarios %}
+                                                <option value="{{ usuario.email }}"
+                                                    {% if compromiso.responsable.email == usuario.email %}selected{% endif %}>
+                                                    {{ usuario.get_full_name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="date" class="form-control" 
+                                               name="compromiso_fecha_{{ forloop.counter }}"
+                                               value="{{ compromiso.fecha_limite|date:'Y-m-d' }}" required>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-remove btn-sm" onclick="this.parentElement.parentElement.parentElement.remove()">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
 
@@ -234,6 +362,75 @@
 
 {% block extra_js %}
 <script>
+    let participanteCounter = {{ participantes.count|default:0 }};
+    let compromisoCounter = {{ compromisos.count|default:0 }};
+
+    // Función para agregar nuevo participante
+    function agregarParticipante() {
+        participanteCounter++;
+        const container = document.getElementById('participantes-container');
+        const html = `
+            <div class="participante-item mb-3">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-6">
+                        <select class="form-select" name="participantes" required>
+                            <option value="">Seleccione un usuario</option>
+                            {% for usuario in usuarios %}
+                                <option value="{{ usuario.email }}">
+                                    {{ usuario.get_full_name }} ({{ usuario.email }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control" name="rol_new_${participanteCounter}" 
+                               placeholder="Rol en la reunión">
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-remove btn-sm" onclick="this.parentElement.parentElement.parentElement.remove()">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    }
+
+    // Función para agregar nuevo compromiso
+    function agregarCompromiso() {
+        compromisoCounter++;
+        const container = document.getElementById('compromisos-container');
+        const html = `
+            <div class="compromiso-item mb-3">
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <textarea class="form-control" name="compromiso_desc_${compromisoCounter}" 
+                                  placeholder="Descripción del compromiso" rows="2" required></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" name="compromiso_resp_${compromisoCounter}" required>
+                            <option value="">Responsable</option>
+                            {% for usuario in usuarios %}
+                                <option value="{{ usuario.email }}">{{ usuario.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" name="compromiso_fecha_${compromisoCounter}" required>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-remove btn-sm" onclick="this.parentElement.parentElement.parentElement.remove()">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    }
+
+    // CKEditor
     document.addEventListener("DOMContentLoaded", function () {
         if (typeof CKEDITOR !== "undefined") {
             CKEDITOR.replace('desarrollo', {

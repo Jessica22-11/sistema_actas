@@ -11,7 +11,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
-
+from datetime import timedelta 
+from datetime import datetime
 
 
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
@@ -36,7 +37,7 @@ def detalle_acta(request, acta_id):
         return redirect("actas:list")
 
     # Obtener información personal
-    participantes = acta.participantes.select_related("usuario").all()
+    participantes = acta.participantes.select_related("usuario").prefetch_related('firmas').all()
     firmas = acta.firmas.select_related("usuario").all()
     compromisos = acta.compromisos.select_related("responsable").all()
 
@@ -45,7 +46,7 @@ def detalle_acta(request, acta_id):
         acta.estado == "en_revision"
         and acta.firmas.filter(usuario=request.user, firmado=False).exists()
     )
-    
+
     if request.user.rol == 'aprendiz':
         compromisos = compromisos.filter(responsable=request.user)
 
@@ -69,23 +70,16 @@ def detalle_acta(request, acta_id):
             request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
             and acta.creador == request.user
             and acta.estado == "en_revision"
-            ),
+        ),
         'puede_comentar': request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director', 'aprendiz'],
     }
-
     return render(request, "actas/detalle.html", context)
-
 
 @login_required
 def editar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id, creador=request.user)
-    
-    if request.user.rol == 'aprendiz':
-        messages.error(request, "No tienes permisos para editar esta acta.")
-        return redirect("actas:list")
-
     if acta.estado != "borrador":
-        messages.error(request, "Solo de pueden editar actas en estado de borrador.")
+        messages.error(request, "Solo se pueden editar actas en estado de borrador.")
         return redirect("actas:detalle", acta_id=acta_id)
 
     if request.method == "POST":
@@ -102,19 +96,28 @@ def editar_acta(request, acta_id):
 
         # Actualizar participantes
         participantes_emails = request.POST.getlist("participantes")
-        acta.participantes.all().delete()  # Limpiar participantes existentes
 
+        # Eliminar participantes que ya no están en la lista
+        for participante in acta.participantes.all():
+            if participante.usuario.email not in participantes_emails:
+                participante.delete()
+
+        # Añadir o actualizar participantes
         for email in participantes_emails:
             try:
-                from accounts.models import User
-
                 usuario = User.objects.get(email=email)
-                Participante.objects.create(
+                rol = request.POST.get(f"rol_{email}", "")
+                participante, created = Participante.objects.get_or_create(
                     acta=acta,
                     usuario=usuario,
-                    rol_en_reunion=request.POST.get(f"rol_{email}", ""),
-                    obligatorio_firma=True,
+                    defaults={
+                        'rol_en_reunion': rol,
+                        'obligatorio_firma': True,
+                    }
                 )
+                if not created and rol:
+                    participante.rol_en_reunion = rol
+                    participante.save()
             except User.DoesNotExist:
                 messages.warning(request, f"Usuario con email {email} no encontrado.")
 
@@ -123,25 +126,23 @@ def editar_acta(request, acta_id):
         for key in request.POST.keys():
             if key.startswith("compromiso_desc_"):
                 index = key.split("_")[-1]
-                if request.POST.get(f"compromiso_desc_{index}").strip():
-                    compromisos_data.append(
-                        {
-                            "descripcion": request.POST.get(f"compromiso_desc_{index}"),
-                            "responsable_email": request.POST.get(
-                                f"compromiso_resp_{index}"
-                            ),
-                            "fecha_limite": request.POST.get(
-                                f"compromiso_fecha_{index}"
-                            ),
-                        }
-                    )
+                descripcion = request.POST.get(f"compromiso_desc_{index}").strip()
+                responsable_email = request.POST.get(f"compromiso_resp_{index}")
+                fecha_limite = request.POST.get(f"compromiso_fecha_{index}")
 
-        # Limpiar compromisos existentes y crear nuevos
+                if descripcion and responsable_email and fecha_limite:
+                    compromisos_data.append({
+                        "descripcion": descripcion,
+                        "responsable_email": responsable_email,
+                        "fecha_limite": fecha_limite,
+                    })
+
+        # Eliminar compromisos existentes
         acta.compromisos.all().delete()
+
+        # Añadir nuevos compromisos
         for comp_data in compromisos_data:
             try:
-                from accounts.models import User
-
                 responsable = User.objects.get(email=comp_data["responsable_email"])
                 Compromiso.objects.create(
                     acta=acta,
@@ -150,10 +151,7 @@ def editar_acta(request, acta_id):
                     fecha_limite=comp_data["fecha_limite"],
                 )
             except User.DoesNotExist:
-                messages.warning(
-                    request,
-                    f'Responsable {comp_data["responsable_email"]} no encontrado.',
-                )
+                messages.warning(request, f'Responsable {comp_data["responsable_email"]} no encontrado.')
 
         messages.success(request, "Acta actualizada exitosamente.")
         return redirect("actas:detalle", acta_id=acta.id)
@@ -163,48 +161,50 @@ def editar_acta(request, acta_id):
         "tipos_reunion": Acta.TIPOS_REUNION,
         "participantes": acta.participantes.all(),
         "compromisos": acta.compromisos.all(),
+        "usuarios": User.objects.all(),
     }
     return render(request, "actas/editar.html", context)
+
 
 
 @login_required
 @require_POST
 def firmar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
-    
+
     if not acta.participantes.filter(usuario=request.user).exists():
         return JsonResponse(
-            {"success": False, "message": "No eres participante de esta acta."}
+            {"success": False, "message": "No eres participante de esta acta."},
+            status=403
         )
 
     try:
         firma = Firma.objects.get(acta=acta, usuario=request.user)
-
         if firma.firmado:
             return JsonResponse(
-                {"success": False, "message": "Ya has firmado esta acta."}
+                {"success": False, "message": "Ya has firmado esta acta."},
+                status=400
             )
-
         if acta.estado != "en_revision":
             return JsonResponse(
                 {
                     "success": False,
                     "message": "Esta acta no está en estado de revisión.",
-                }
+                },
+                status=400
             )
+
+        # Obtener comentarios del POST
+        comentarios = request.POST.get("comentarios", "")
 
         # Procesar Firma
         firma.comentarios = comentarios
         firma.firmado = True
         firma.fecha_firma = timezone.now()
-
-        # Si el usuario tiene una firma digital guardada, úsala
         if request.user.firma_digital:
             firma.firma_imagen = request.user.firma_digital
-
-        # Guarda dirección IP si quieres mantenerla
-        firma.ip_address = firma.get_client_ip(request)
         firma.save()
+
         # Crear notificaciones para el creador del acta
         Notification.objects.create(
             usuario=acta.creador,
@@ -214,7 +214,7 @@ def firmar_acta(request, acta_id):
             enlace=f"/actas/{acta.id}/",
         )
 
-        # Verificar si todas las firmas estan completas
+        # Verificar si todas las firmas están completas
         if acta.get_firmas_completadas() == acta.get_total_firmas():
             # Notificar al creador que el acta puede ser finalizada
             Notification.objects.create(
@@ -233,13 +233,13 @@ def firmar_acta(request, acta_id):
                 "total_firmas": acta.get_total_firmas(),
             }
         )
-
     except Firma.DoesNotExist:
         return JsonResponse(
-            {"success": False, "message": "No tienes permisos para firmar esta acta."}
+            {"success": False, "message": "No tienes permisos para firmar esta acta."},
+            status=403
         )
     except Exception as e:
-        return JsonResponse({"success": False, "message": f"Error al firmar: {str(e)}"})
+        return JsonResponse({"success": False, "message": f"Error al firmar: {str(e)}"}, status=500)
 
 
 @login_required
@@ -247,35 +247,47 @@ def firmar_acta(request, acta_id):
 def enviar_revision(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id, creador=request.user)
 
-    if acta.estado != "borrador":
-        messages.error(
-            request, "Solo de pueden enviar revisiones en estado de borrador."
-        )
+    if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
+        messages.error(request, "No tienes permisos para enviar actas a revisión.")
         return redirect("actas:detalle", acta_id=acta_id)
 
-    if not acta.participantes.exists():
-        messages.error(
-            request, "Debe agregar al menos un participante antes de enviar a revisión."
-        )
-        return redirect("actas:editar", acta_id=acta_id)
+    if acta.estado != "borrador":
+        messages.error(request, "Solo se pueden enviar a revisión actas en estado de borrador.")
+        return redirect("actas:detalle", acta_id=acta_id)
 
-    # Cambiar estado y crear firmas
+    # Verificar que hay participantes
+    if not acta.participantes.exists():
+        messages.error(request, "No hay participantes asignados a esta acta.")
+        return redirect("actas:detalle", acta_id=acta_id)
+
+    # Cambiar el estado del acta
     acta.estado = "en_revision"
+    acta.fecha_limite_firmas = timezone.now() + timedelta(days=acta.aplicar_silencio_dias)
     acta.save()
 
-    # Crear registros de firma para cada participante
+    participantes_notificados = 0
     for participante in acta.participantes.all():
-        Firma.objects.get_or_create(
-            acta=acta, usuario=participante.usuario, defaults={"firmado": False}
-        )
-
-    # Enviar notificaciones a participantes
-    enviar_notificacion_participantes(acta)
-
-    messages.success(
-        request, "Acta enviada a revisión. Los participantes han sido notificados."
+    # Crear o recuperar firma
+        firma, created = Firma.objects.get_or_create(
+        acta=acta,
+        usuario=participante.usuario,
+        defaults={"firmado": False}
     )
+    
+    # Crear notificación para que le aparezca al participante
+    Notification.objects.create(
+        usuario=participante.usuario,
+        tipo="firma_pendiente",
+        titulo="📝 Nueva acta pendiente de firma",
+        mensaje=f"Tienes pendiente firmar el acta '{acta.numero_acta} - {acta.titulo}'. Fecha límite: {acta.fecha_limite_firmas.strftime('%d/%m/%Y')}",
+        enlace=f"/actas/{acta.id}/",
+    )
+    participantes_notificados += 1
+    print(f"✅ Notificación enviada a: {participante.usuario.email}")  # Para debu
+
+    messages.success(request, f"Acta enviada a revisión. {participantes_notificados} participantes han sido notificados.")
     return redirect("actas:detalle", acta_id=acta_id)
+
 
 
 @login_required
@@ -400,7 +412,7 @@ def generar_pdf(request, acta_id):
     story.append(Spacer(1, 20))
 
     # Orden del día
-    if acta.roden_dia:
+    if acta.orden_dia:
         story.append(Paragraph("ORDEN DEL DÍA", style["Heading2"]))
         story.append(Paragraph(acta.orden_dia.replace("\n", "<br/>"), style["Normal"]))
         story.append(Spacer(1, 15))
@@ -488,20 +500,20 @@ def actas_list(request):
     estado = request.GET.get('estado')
     tipo = request.GET.get('tipo')
     search = request.GET.get('search')
-    
+
     if request.user.rol == 'aprendiz':
         actas = Acta.objects.filter(participantes__usuario=request.user).distinct()
-        
+
     elif request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']:
         actas = Acta.objects.filter(
             Q(creador=request.user) | Q(participantes__usuario=request.user)
-        ). distinct()
-    
+        ).distinct()
+
     elif request.user.rol == 'admin' or request.user.is_superuser:
         actas = Acta.objects.all()
     else:
         actas = Acta.objects.none()
-        
+
     if estado:
         actas = actas.filter(estado=estado)
     if tipo:
@@ -512,12 +524,12 @@ def actas_list(request):
             Q(numero_acta__icontains=search) |
             Q(desarrollo__icontains=search)
         )
-    
+
     # Paginación
     paginator = Paginator(actas.order_by('-fecha_creacion'), 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     context = {
         'page_obj': page_obj,
         'estados': Acta.ESTADOS,
@@ -529,57 +541,136 @@ def actas_list(request):
         },
         'es_aprendiz': request.user.rol == "aprendiz",
     }
-    
+
     return render(request, 'actas/actas_list.html', context)
+
 
 @login_required
 def crear_acta(request):
     
     if request.user.rol == 'aprendiz':
         messages.error(request, "No tienes permisos para crear actas.")
-        return redirect("actas:list")
+        return redirect("actas:actas_list")
     
     if request.method == 'POST':
-        # Procesar con IA si se proporciona resumen
-        resumen = request.POST.get('resumen_reunion', '').strip()
-        
-        if resumen:
-            try:
-                contenido_ia = generar_acta_con_ia(resumen, request.user)
-                
-                acta = Acta.objects.create(
-                    titulo=request.POST.get('titulo'),
-                    tipo_reunion=request.POST.get('tipo_reunion'),
-                    fecha_reunion=request.POST.get('fecha_reunion'),
-                    lugar_reunion=request.POST.get('lugar_reunion'),
-                    modalidad=request.POST.get('modalidad'),
-                    orden_dia=contenido_ia.get('orden_dia', ''),
-                    desarrollo=contenido_ia.get('desarrollo', ''),
-                    resumen_ia=resumen,
-                    creador=request.user
-                )
-                
-                messages.success(request, 'Acta creada exitosamente con asistencia de IA.')
-                return redirect('actas:detalle', acta_id=acta.id)
-                
-            except Exception as e:
-                messages.error(request, f'Error al procesar con IA: {str(e)}')
-        else:
-            # Crear acta normal sin IA
+        try:
+            # Procesar con IA si se proporciona resumen
+            resumen = request.POST.get('resumen_reunion', '').strip()
+            
+            if resumen:
+                try:
+                    contenido_ia = generar_acta_con_ia(resumen, request.user)
+                    orden_dia = contenido_ia.get('orden_dia', '')
+                    desarrollo = contenido_ia.get('desarrollo', '')
+                except Exception as e:
+                    messages.warning(request, f'No se pudo procesar con IA: {str(e)}')
+                    orden_dia = request.POST.get('orden_dia', '')
+                    desarrollo = request.POST.get('desarrollo', '')
+            else:
+                # Sin IA, tomar datos del formulario
+                orden_dia = request.POST.get('orden_dia', '')
+                desarrollo = request.POST.get('desarrollo', '')
+            
+            # Crear el acta
             acta = Acta.objects.create(
                 titulo=request.POST.get('titulo'),
                 tipo_reunion=request.POST.get('tipo_reunion'),
                 fecha_reunion=request.POST.get('fecha_reunion'),
                 lugar_reunion=request.POST.get('lugar_reunion'),
                 modalidad=request.POST.get('modalidad'),
-                orden_dia=request.POST.get('orden_dia', ''),
-                desarrollo=request.POST.get('desarrollo', ''),
+                orden_dia=orden_dia,
+                desarrollo=desarrollo,
+                observaciones=request.POST.get('observaciones', ''),
+                resumen_ia=resumen if resumen else '',
                 creador=request.user
             )
             
-            messages.success(request, 'Acta creada exitosamente.')
+            # ========================================
+            # PROCESAR PARTICIPANTES
+            # ========================================
+            participantes_emails = request.POST.getlist('participantes')
+            participantes_agregados = set()  # Para evitar duplicados
+            
+            for email in participantes_emails:
+                email = email.strip()
+                if email and email not in participantes_agregados:  # ← Validar duplicados
+                    try:
+                        usuario = User.objects.get(email=email)
+                        
+                        # Verificar si ya existe
+                        if not Participante.objects.filter(acta=acta, usuario=usuario).exists():
+                            # Buscar el rol de este participante
+                            rol = ''
+                            for key in request.POST.keys():
+                                if key.startswith('rol_participante_') or key.startswith(f'rol_{email}'):
+                                    rol = request.POST.get(key, '')
+                                    break
+                            
+                            # Crear participante
+                            Participante.objects.create(
+                                acta=acta,
+                                usuario=usuario,
+                                rol_en_reunion=rol if rol else 'Participante',
+                                obligatorio_firma=True
+                            )
+                            participantes_agregados.add(email)
+                            print(f"✅ Participante creado: {usuario.email}")
+                        
+                    except User.DoesNotExist:
+                        messages.warning(request, f'Usuario con email {email} no encontrado.')
+            
+            # ========================================
+            # PROCESAR COMPROMISOS
+            # ========================================
+            from datetime import datetime
+            
+            compromisos_data = []
+            
+            # Buscar todos los compromisos en el POST
+            for key in request.POST.keys():
+                if key.startswith('compromiso_desc_'):
+                    index = key.split('_')[-1]
+                    descripcion = request.POST.get(f'compromiso_desc_{index}', '').strip()
+                    responsable_email = request.POST.get(f'compromiso_resp_{index}', '').strip()
+                    fecha_limite_str = request.POST.get(f'compromiso_fecha_{index}', '').strip()
+                    
+                    if descripcion and responsable_email and fecha_limite_str:
+                        # Convertir string a fecha
+                        try:
+                            fecha_limite = datetime.strptime(fecha_limite_str, '%Y-%m-%d').date()
+                            compromisos_data.append({
+                                'descripcion': descripcion,
+                                'responsable_email': responsable_email,
+                                'fecha_limite': fecha_limite
+                            })
+                        except ValueError:
+                            messages.warning(request, f'Fecha inválida para compromiso: {fecha_limite_str}')
+            
+            # Crear los compromisos
+            for comp_data in compromisos_data:
+                try:
+                    responsable = User.objects.get(email=comp_data['responsable_email'])
+                    Compromiso.objects.create(
+                        acta=acta,
+                        descripcion=comp_data['descripcion'],
+                        responsable=responsable,
+                        fecha_limite=comp_data['fecha_limite']  # Ya es un objeto date
+                    )
+                    print(f"✅ Compromiso creado para: {responsable.email}")
+                    
+                except User.DoesNotExist:
+                    messages.warning(request, f'Responsable {comp_data["responsable_email"]} no encontrado.')
+            
+            # Mensaje de éxito
+            messages.success(request, f'Acta {acta.numero_acta} creada exitosamente con {participantes_agregados.__len__()} participantes.')
             return redirect('actas:detalle', acta_id=acta.id)
+            
+        except Exception as e:
+            messages.error(request, f'Error al crear el acta: {str(e)}')
+            import traceback
+            traceback.print_exc()
     
+    # GET request - mostrar formulario
     context = {
         'tipos_reunion': Acta.TIPOS_REUNION,
     }
@@ -696,9 +787,11 @@ def eliminar_compromiso(request, compromiso_id):
     compromiso.delete()
     return redirect("actas:lista_compromisos", acta_id=acta_id)
 
+@login_required
 def mis_compromisos(request):
-    compromisos = Compromiso.objects.all()  # luego lo puedes filtrar por usuario
+    compromisos = Compromiso.objects.filter(responsable=request.user).order_by('-fecha_limite')
     return render(request, "actas/mis_compromisos.html", {"compromisos": compromisos})
+
 
 @login_required
 @require_POST
