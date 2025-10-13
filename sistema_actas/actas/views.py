@@ -19,7 +19,7 @@ from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
 from core.utils import generar_acta_con_ia, enviar_notificacion_participantes
 from notifications.models import Notification
 from accounts.models import User
-
+from .forms import ReporteCompromisoForm
 
 
 # Create your views here.
@@ -801,13 +801,36 @@ def crear_compromiso(request, acta_id):
 @login_required
 def editar_compromiso(request, compromiso_id):
     compromiso = get_object_or_404(Compromiso, id=compromiso_id)
+    
+    # *** 1. Validar que el usuario es el responsable ***
+    if request.user != compromiso.responsable:
+        # Si no es el responsable, lo rediriges o le das un error 403 (Prohibido)
+        # Por ahora, simplemente lo redirigiremos a su lista de compromisos.
+        return redirect("actas:mis_compromisos") 
+    
+    # *** 2. Usar el formulario de reporte ***
     if request.method == "POST":
-        compromiso.descripcion = request.POST.get("descripcion")
-        compromiso.fecha_limite = request.POST.get("fecha_limite")
-        compromiso.estado = request.POST.get("estado")
-        compromiso.save()
-        return redirect("actas:lista_compromisos", acta_id=compromiso.acta.id)
-    return render(request, "actas/compromisos/form.html", {"compromiso": compromiso})
+        form = ReporteCompromisoForm(request.POST, instance=compromiso)
+        if form.is_valid():
+            compromiso_guardado = form.save(commit=False)
+            
+            # Si el responsable marca 100%, Git actualiza el estado a 'completado' 
+            # (tu método save() ya lo hace)
+            if compromiso_guardado.porcentaje_avance == 100:
+                compromiso_guardado.fecha_completado = timezone.now()
+            
+            compromiso_guardado.save()
+            # Puedes usar messages.success para notificar al usuario.
+            return redirect("actas:mis_compromisos")
+    else:
+        form = ReporteCompromisoForm(instance=compromiso)
+        
+    context = {
+        "compromiso": compromiso,
+        "form": form
+    }
+    # NOTA: Debes crear la template 'actas/compromisos/reporte_form.html'
+    return render(request, "actas/reporte_form.html", context)
 
 @login_required
 def eliminar_compromiso(request, compromiso_id):

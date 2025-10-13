@@ -179,6 +179,7 @@ class Compromiso(models.Model):
     porcentaje_avance = models.IntegerField(default=0)
     observaciones = models.TextField(blank=True)
     fecha_completado = models.DateTimeField(null=True, blank=True)
+    reporte_cumplimiento = models.TextField(blank=True, verbose_name="Reporte/Justificación del Responsable", help_text="Descripción del avance o justificación del estado/cumplimiento.")
     
     class Meta:
         verbose_name = 'Compromiso'
