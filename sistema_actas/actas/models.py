@@ -213,3 +213,5 @@ class ComentarioActa(models.Model):
     
     def __str__(self):
         return f"Comentario de {self.autor.get_full_name()} en {self.acta.numero_acta}"
+    
+    

@@ -532,12 +532,13 @@ Ejemplo:
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/actas.js' %}"></script>
 <script>
 $(document).ready(function() {
     // Variables globales
     let currentStep = 1;
     const totalSteps = 4;
+    let participanteCounter = 1;
+    let compromisoCounter = 0;
     
     // Inicializar CKEditor para desarrollo
     CKEDITOR.replace('desarrollo', {
@@ -550,7 +551,157 @@ $(document).ready(function() {
         ]
     });
 
-    // Navegación entre pasos
+    // ========================================
+    // AGREGAR PARTICIPANTE
+    // ========================================
+    $('#btn-agregar-participante').click(function() {
+        participanteCounter++;
+        const html = `
+            <div class="mb-3 p-3 border rounded item-dinamico" id="participante-${participanteCounter}">
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <label class="form-label">Email del Participante</label>
+                        <input type="email" name="participantes" class="form-control email-sena" 
+                               placeholder="correo@sena.edu.co" required>
+                        <div class="invalid-feedback">Ingrese un email válido del SENA</div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Rol en la Reunión</label>
+                        <input type="text" name="rol_participante_${participanteCounter}" 
+                               class="form-control" placeholder="Ej: Participante, Secretario">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" class="btn btn-danger btn-sm w-100" 
+                                onclick="eliminarParticipante(${participanteCounter})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        $('#participantes-container').append(html);
+        
+        // Scroll al nuevo participante
+        $('html, body').animate({
+            scrollTop: $(`#participante-${participanteCounter}`).offset().top - 100
+        }, 300);
+    });
+
+    // Función global para eliminar participante
+    window.eliminarParticipante = function(id) {
+        $(`#participante-${id}`).fadeOut(300, function() {
+            $(this).remove();
+        });
+    };
+
+    // ========================================
+    // AGREGAR COMPROMISO
+    // ========================================
+    $('#btn-agregar-compromiso').click(function() {
+        compromisoCounter++;
+        const html = `
+            <div class="mb-3 p-3 border rounded item-dinamico" id="compromiso-${compromisoCounter}">
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label">Descripción del Compromiso</label>
+                        <textarea name="compromiso_desc_${compromisoCounter}" 
+                                  class="form-control compromiso-descripcion" 
+                                  rows="2" placeholder="Descripción del compromiso" required></textarea>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Responsable</label>
+                        <input type="email" name="compromiso_resp_${compromisoCounter}" 
+                               class="form-control email-sena" 
+                               placeholder="correo@sena.edu.co" required>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label class="form-label">Fecha Límite</label>
+                        <input type="date" name="compromiso_fecha_${compromisoCounter}" 
+                               class="form-control" required>
+                    </div>
+                    <div class="col-md-1 mb-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" class="btn btn-danger btn-sm w-100" 
+                                onclick="eliminarCompromiso(${compromisoCounter})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        $('#compromisos-container').append(html);
+        
+        // Scroll al nuevo compromiso
+        $('html, body').animate({
+            scrollTop: $(`#compromiso-${compromisoCounter}`).offset().top - 100
+        }, 300);
+    });
+
+    // Función global para eliminar compromiso
+    window.eliminarCompromiso = function(id) {
+        $(`#compromiso-${id}`).fadeOut(300, function() {
+            $(this).remove();
+        });
+    };
+
+    // ========================================
+    // PROCESAMIENTO CON IA
+    // ========================================
+    $('#btn-procesar-ia').click(function() {
+        const resumen = $('#resumen_reunion').val().trim();
+        
+        if (!resumen) {
+            showAlert('Por favor ingrese un resumen de la reunión', 'warning');
+            return;
+        }
+
+        // Mostrar indicador de procesamiento
+        $('#ai-form-section').hide();
+        $('#ai-processing-indicator').addClass('active').show();
+        
+        // Llamada AJAX
+        $.ajax({
+            url: "{% url 'actas:procesar_ia' %}",
+            method: 'POST',
+            data: {
+                resumen: resumen,
+                csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Llenar campos con respuesta de IA
+                    $('#orden_dia').val(response.data.orden_dia || '').addClass('updated-by-ai');
+                    
+                    // Actualizar CKEditor
+                    if (CKEDITOR.instances.desarrollo) {
+                        CKEDITOR.instances.desarrollo.setData(response.data.desarrollo || '');
+                    }
+                    
+                    showAlert('Contenido generado exitosamente por IA', 'success');
+                    $('#btn-next-step-2').prop('disabled', false);
+                    
+                    setTimeout(function() {
+                        showStep(3);
+                    }, 1500);
+                } else {
+                    showAlert(response.message || 'Error al procesar con IA', 'error');
+                    $('#ai-form-section').show();
+                }
+            },
+            error: function() {
+                showAlert('Error de conexión al procesar con IA', 'error');
+                $('#ai-form-section').show();
+            },
+            complete: function() {
+                $('#ai-processing-indicator').removeClass('active').hide();
+            }
+        });
+    });
+
+    // ========================================
+    // NAVEGACIÓN ENTRE PASOS
+    // ========================================
     function showStep(step) {
         $('.form-step').removeClass('active');
         $(`#step-${step}`).addClass('active');
@@ -575,16 +726,17 @@ $(document).ready(function() {
         }
     });
 
-    $('#btn-prev-step-2, #btn-prev-step-3, #btn-prev-step-4').click(function() {
-        const prevStep = currentStep - 1;
-        if (prevStep >= 1) {
-            showStep(prevStep);
-        }
+    $('#btn-prev-step-2').click(function() {
+        showStep(1);
     });
 
     $('#btn-next-step-2, #btn-skip-ia').click(function() {
         $('#btn-next-step-2').prop('disabled', false);
         showStep(3);
+    });
+
+    $('#btn-prev-step-3').click(function() {
+        showStep(2);
     });
 
     $('#btn-next-step-3').click(function() {
@@ -594,7 +746,13 @@ $(document).ready(function() {
         }
     });
 
-    // Validaciones
+    $('#btn-prev-step-4').click(function() {
+        showStep(3);
+    });
+
+    // ========================================
+    // VALIDACIONES
+    // ========================================
     function validateStep1() {
         let valid = true;
         const requiredFields = ['#titulo', '#tipo_reunion', '#fecha_reunion', '#lugar_reunion'];
@@ -609,7 +767,7 @@ $(document).ready(function() {
         });
 
         if (!valid) {
-            window.actasManager.showAlert('Por favor complete todos los campos requeridos', 'error');
+            showAlert('Por favor complete todos los campos requeridos', 'warning');
         }
 
         return valid;
@@ -618,24 +776,49 @@ $(document).ready(function() {
     function validateStep3() {
         let valid = true;
         
-        // Validar que hay al menos un participante además del creador
-        const participantes = $('input[name="participantes"]').length;
-        if (participantes < 1) {
-            window.actasManager.showAlert('Debe haber al menos un participante', 'error');
+        // Validar que hay al menos un participante
+        const participantesCount = $('input[name="participantes"]').length;
+        if (participantesCount < 1) {
+            showAlert('Debe agregar al menos un participante', 'warning');
             valid = false;
         }
 
-        // Validar emails SENA
-        $('.email-sena').each(function() {
-            if (!window.actasManager.validarEmailSena(this)) {
+        // Validar emails
+        $('input[name="participantes"]').each(function() {
+            const email = $(this).val().trim();
+            if (email && !validarEmailSena(email)) {
+                $(this).addClass('is-invalid');
                 valid = false;
+            } else {
+                $(this).removeClass('is-invalid');
             }
         });
+
+        // Validar compromisos
+        $('.compromiso-descripcion').each(function() {
+            if (!$(this).val().trim()) {
+                $(this).addClass('is-invalid');
+                valid = false;
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        if (!valid) {
+            showAlert('Por favor complete correctamente todos los campos', 'warning');
+        }
 
         return valid;
     }
 
-    // Generar resumen para revisión final
+    function validarEmailSena(email) {
+        const dominiosValidos = ['@sena.edu.co', '@soy.sena.edu.co', '@gmail.com'];
+        return dominiosValidos.some(dominio => email.endsWith(dominio));
+    }
+
+    // ========================================
+    // GENERAR RESUMEN
+    // ========================================
     function generateResumen() {
         const titulo = $('#titulo').val();
         const tipo = $('#tipo_reunion option:selected').text();
@@ -645,23 +828,25 @@ $(document).ready(function() {
         
         const participantes = [];
         $('input[name="participantes"]').each(function() {
-            if ($(this).val()) {
-                participantes.push($(this).val());
+            const email = $(this).val().trim();
+            if (email) {
+                participantes.push(email);
             }
         });
 
         const compromisos = [];
         $('.compromiso-descripcion').each(function() {
-            if ($(this).val()) {
-                compromisos.push($(this).val());
+            const desc = $(this).val().trim();
+            if (desc) {
+                compromisos.push(desc);
             }
         });
 
         const resumenHtml = `
             <div class="row">
                 <div class="col-md-6">
-                    <h6>Información General</h6>
-                    <table class="table table-sm">
+                    <h6 class="text-primary"><i class="fas fa-info-circle me-2"></i>Información General</h6>
+                    <table class="table table-sm table-striped">
                         <tr><td><strong>Título:</strong></td><td>${titulo}</td></tr>
                         <tr><td><strong>Tipo:</strong></td><td>${tipo}</td></tr>
                         <tr><td><strong>Fecha:</strong></td><td>${fecha}</td></tr>
@@ -670,17 +855,17 @@ $(document).ready(function() {
                     </table>
                 </div>
                 <div class="col-md-6">
-                    <h6>Participantes (${participantes.length})</h6>
+                    <h6 class="text-primary"><i class="fas fa-users me-2"></i>Participantes (${participantes.length})</h6>
                     <ul class="list-group list-group-flush">
-                        ${participantes.map(p => `<li class="list-group-item py-1 px-0">${p}</li>`).join('')}
+                        ${participantes.map(p => `<li class="list-group-item py-1 px-0"><i class="fas fa-user me-2 text-muted"></i>${p}</li>`).join('')}
                     </ul>
                 </div>
             </div>
             ${compromisos.length > 0 ? `
                 <div class="mt-3">
-                    <h6>Compromisos (${compromisos.length})</h6>
+                    <h6 class="text-primary"><i class="fas fa-tasks me-2"></i>Compromisos (${compromisos.length})</h6>
                     <ul class="list-group">
-                        ${compromisos.map(c => `<li class="list-group-item">${c.substring(0, 100)}${c.length > 100 ? '...' : ''}</li>`).join('')}
+                        ${compromisos.map(c => `<li class="list-group-item"><i class="fas fa-check-circle me-2 text-success"></i>${c.substring(0, 100)}${c.length > 100 ? '...' : ''}</li>`).join('')}
                     </ul>
                 </div>
             ` : ''}
@@ -689,14 +874,41 @@ $(document).ready(function() {
         $('#resumen-acta').html(resumenHtml);
     }
 
-    // Habilitar navegación cuando IA procese exitosamente
-    $('#btn-procesar-ia').click(function() {
-        // Esta funcionalidad ya está implementada en actasManager
-        // Solo habilitamos el botón siguiente después del procesamiento exitoso
+    // ========================================
+    // ALERTAS
+    // ========================================
+    function showAlert(message, type = 'info') {
+        const alertClass = {
+            'success': 'alert-success',
+            'error': 'alert-danger',
+            'warning': 'alert-warning',
+            'info': 'alert-info'
+        }[type] || 'alert-info';
+
+        const icon = {
+            'success': 'fa-check-circle',
+            'error': 'fa-exclamation-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle'
+        }[type] || 'fa-info-circle';
+
+        const alert = $(`
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                <i class="fas ${icon} me-2"></i>${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+
+        $('#alerts-container').html(alert);
+        
+        $('html, body').animate({scrollTop: 0}, 300);
+        
         setTimeout(function() {
-            $('#btn-next-step-2').prop('disabled', false);
-        }, 100);
-    });
+            alert.fadeOut(300, function() {
+                $(this).remove();
+            });
+        }, 5000);
+    }
 
     // Auto-llenar fecha actual
     const now = new Date();

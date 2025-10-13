@@ -23,7 +23,7 @@ class Notification (models.Model):
     tipo = models.CharField(max_length=30, choices=TIPOS_NOTIFICACION)
     titulo = models.CharField(max_length=200)
     mensaje = models.TextField()
-    enlace = models.URLField(blank=True, help_text='URL para redireccionar al hacer clic')
+    enlace = models.CharField(max_length=500, blank=True, help_text='URL para redireccionar al hacer clic')    
     leida = models.BooleanField(default=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_lectura = models.DateTimeField(null=True, blank=True)
