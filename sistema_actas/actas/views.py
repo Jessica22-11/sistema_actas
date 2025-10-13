@@ -87,6 +87,11 @@ def detalle_acta(request, acta_id):
             and acta.creador == request.user
             and acta.estado == "en_revision"
         ),
+        "puede_archivar": (
+            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
+            and acta.creador == request.user
+            and acta.estado == "finalizada"
+),
         'puede_comentar': request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director', 'aprendiz'],
     }
     return render(request, "actas/detalle.html", context)
@@ -713,7 +718,6 @@ def eliminar_acta(request, acta_id):
 
 # ✅ Finalizar Acta
 @login_required
-@permission_required("actas.can_finalize_acta", raise_exception=True)
 def finalizar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
     
@@ -742,29 +746,47 @@ def finalizar_acta(request, acta_id):
     return redirect("actas:detalle", acta_id=acta.id)
 
 # 📂 Archivar Acta
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+
 @login_required
-@permission_required("actas.can_archive_acta", raise_exception=True)
+@require_POST
 def archivar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
     
+    # Verificar permisos
     if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
-        messages.error(request, "No tienes permisos para archivar actas.")
-        return redirect("actas:detalle", acta_id=acta.id)
+        return JsonResponse({
+            'success': False,
+            'message': 'No tienes permisos para archivar actas.'
+        }, status=403)
     
-    if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
-        messages.error(request, "No tienes permisos para archivar actas.")
-        return redirect("actas:detalle", acta_id=acta.id)
+    # Verificar que sea el creador
+    if acta.creador != request.user and not request.user.is_superuser:
+        return JsonResponse({
+            'success': False,
+            'message': 'Solo el creador puede archivar esta acta.'
+        }, status=403)
 
+    # Verificar estado
     if acta.estado != "finalizada":
-        messages.warning(request, "Solo las actas finalizadas se pueden archivar.")
-        return redirect("actas:detalle", acta_id=acta.id)
+        return JsonResponse({
+            'success': False,
+            'message': 'Solo las actas finalizadas se pueden archivar.'
+        }, status=400)
 
+    # Archivar
     acta.estado = "archivada"
     acta.fecha_modificacion = timezone.now()
     acta.save()
 
-    messages.info(request, "El acta ha sido archivada.")
-    return redirect("actas:detalle", acta_id=acta.id)
+    return JsonResponse({
+        'success': True,
+        'message': 'El acta ha sido archivada exitosamente.'
+    })
 
 # ✍️ Firmas pendientes (solo las del usuario autenticado)
 @login_required

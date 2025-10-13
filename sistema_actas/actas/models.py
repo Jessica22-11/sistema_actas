@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime, date
 import uuid
 from accounts.models import User
 
@@ -187,11 +187,23 @@ class Compromiso(models.Model):
         ordering = ['fecha_limite']
     
     def save(self, *args, **kwargs):
+        # Asegurar que fecha_limite sea un objeto date
+        if isinstance(self.fecha_limite, str):
+            try:
+                self.fecha_limite = datetime.strptime(self.fecha_limite, '%Y-%m-%d').date()
+            except (ValueError, AttributeError):
+                pass
+        
+        # Marcar como completado si alcanza 100%
         if self.porcentaje_avance == 100 and self.estado != 'completado':
             self.estado = 'completado'
             self.fecha_completado = timezone.now()
-        elif self.fecha_limite < timezone.now().date() and self.estado not in ['completado']:
-            self.estado = 'vencido'
+        
+        # Marcar como vencido si pasó la fecha límite
+        elif self.fecha_limite and isinstance(self.fecha_limite, date):
+            if self.fecha_limite < timezone.now().date() and self.estado not in ['completado']:
+                self.estado = 'vencido'
+        
         super().save(*args, **kwargs)
     
     def dias_restantes(self):
@@ -214,5 +226,3 @@ class ComentarioActa(models.Model):
     
     def __str__(self):
         return f"Comentario de {self.autor.get_full_name()} en {self.acta.numero_acta}"
-    
-    

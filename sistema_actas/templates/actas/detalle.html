@@ -4,6 +4,14 @@
 {% block title %}{{ acta.numero_acta }} - Detalle de Acta{% endblock %}
 {% block extra_css %}
 <style>
+    :root {
+        --sena-green: #39a900;
+        --sena-dark-green: #2d8700;
+        --border-radius: 8px;
+        --border-color: #dee2e6;
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
     .acta-header {
         background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
         color: white;
@@ -169,9 +177,9 @@
                 </button>
             {% endif %}
 
-            {% if puede_finalizar %}
-                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modal-finalizar">
-                    <i class="fas fa-check-circle me-1"></i>Finalizar
+            {% if puede_archivar %}
+                <button type="button" class="btn btn-secondary" onclick="archivarActaDetalle({{ acta.id }})">
+                    <i class="fas fa-archive me-1"></i>Archivar
                 </button>
             {% endif %}
 
@@ -517,8 +525,11 @@
 
 <!-- Inputs ocultos para JavaScript -->
 <input type="hidden" id="acta-id" value="{{ acta.id }}">
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 {% endblock %}
+
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 $(document).ready(function() {
     // Inicializar manualmente el modal de enviar a revisión
@@ -535,7 +546,7 @@ $(document).ready(function() {
             url: url,
             data: form.serialize(),
             success: function(response) {
-                window.location.reload(); // Recargar la página para ver los cambios
+                window.location.reload();
             },
             error: function(xhr, status, error) {
                 console.error("Error:", error);
@@ -558,22 +569,22 @@ $(document).ready(function() {
     // Verificar actualizaciones cada 30 segundos
     setInterval(actualizarProgresoFirmas, 30000);
 });
+
+// Función para firmar acta
 $(document).ready(function() {
-    // Cuando se haga clic en el botón "Confirmar Firma"
     $('#btn-firmar-acta').on('click', function() {
         const actaId = $('#acta-id').val();
         const comentarios = $('#comentarios-firma').val();
 
         $.ajax({
-            url: `/actas/${actaId}/firmar/`,  // Ruta hacia tu vista firmar_acta
+            url: `/actas/${actaId}/firmar/`,
             method: 'POST',
             data: {
                 comentarios: comentarios,
-                csrfmiddlewaretoken: '{{ csrf_token }}'
+                csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
             },
             success: function(response) {
                 if (response.success) {
-                    // Mostrar notificación
                     Swal.fire({
                         icon: 'success',
                         title: '¡Acta firmada!',
@@ -600,5 +611,58 @@ $(document).ready(function() {
         });
     });
 });
+
+// Función para archivar desde la vista de detalle
+function archivarActaDetalle(actaId) {
+    Swal.fire({
+        title: '¿Archivar esta acta?',
+        text: "El acta pasará al estado archivada y no se podrá modificar",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#6c757d',
+        cancelButtonColor: '#dc3545',
+        confirmButtonText: 'Sí, archivar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch(`/actas/${actaId}/archivar/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Archivada!',
+                        text: 'El acta ha sido archivada exitosamente.',
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'No se pudo archivar el acta'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ocurrió un problema al archivar el acta.'
+                });
+            });
+        }
+    });
+}
 </script>
 {% endblock %}
