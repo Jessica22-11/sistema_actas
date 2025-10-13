@@ -71,6 +71,22 @@ def detalle_acta(request, acta_id):
             and acta.estado == "en_revision"
             ),
         'puede_comentar': request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director', 'aprendiz'],
+        "puede_editar": (
+            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
+            and acta.creador == request.user
+            and acta.estado == "borrador"
+        ),
+        "puede_enviar_revision": (
+            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
+            and acta.creador == request.user
+            and acta.estado == "borrador"
+        ),
+        "puede_finalizar": (
+            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
+            and acta.creador == request.user
+            and acta.estado == "en_revision"
+            ),
+        'puede_comentar': request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director', 'aprendiz'],
     }
 
     return render(request, "actas/detalle.html", context)
@@ -79,6 +95,10 @@ def detalle_acta(request, acta_id):
 @login_required
 def editar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id, creador=request.user)
+    
+    if request.user.rol == 'aprendiz':
+        messages.error(request, "No tienes permisos para editar esta acta.")
+        return redirect("actas:list")
     
     if request.user.rol == 'aprendiz':
         messages.error(request, "No tienes permisos para editar esta acta.")
@@ -171,6 +191,11 @@ def editar_acta(request, acta_id):
 @require_POST
 def firmar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
+    
+    if not acta.participantes.filter(usuario=request.user).exists():
+        return JsonResponse(
+            {"success": False, "message": "No eres participante de esta acta."}
+        )
     
     if not acta.participantes.filter(usuario=request.user).exists():
         return JsonResponse(
@@ -502,6 +527,19 @@ def actas_list(request):
     else:
         actas = Acta.objects.none()
         
+    if request.user.rol == 'aprendiz':
+        actas = Acta.objects.filter(participantes__usuario=request.user).distinct()
+        
+    elif request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']:
+        actas = Acta.objects.filter(
+            Q(creador=request.user) | Q(participantes__usuario=request.user)
+        ). distinct()
+    
+    elif request.user.rol == 'admin' or request.user.is_superuser:
+        actas = Acta.objects.all()
+    else:
+        actas = Acta.objects.none()
+        
     if estado:
         actas = actas.filter(estado=estado)
     if tipo:
@@ -528,12 +566,17 @@ def actas_list(request):
             'search': search,
         },
         'es_aprendiz': request.user.rol == "aprendiz",
-    }
+        }
     
     return render(request, 'actas/actas_list.html', context)
 
 @login_required
 def crear_acta(request):
+    
+    if request.user.rol == 'aprendiz':
+        messages.error(request, "No tienes permisos para crear actas.")
+        return redirect("actas:list")
+    
     
     if request.user.rol == 'aprendiz':
         messages.error(request, "No tienes permisos para crear actas.")
@@ -608,6 +651,10 @@ def finalizar_acta(request, acta_id):
     if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
         messages.error(request, "No tienes permisos para finalizar actas.")
         return redirect("actas:detalle", acta_id=acta.id)
+    
+    if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
+        messages.error(request, "No tienes permisos para finalizar actas.")
+        return redirect("actas:detalle", acta_id=acta.id)
 
     if acta.estado not in ["borrador", "en_revision"]:
         messages.warning(request, "El acta no se puede finalizar en este estado.")
@@ -630,6 +677,10 @@ def finalizar_acta(request, acta_id):
 @permission_required("actas.can_archive_acta", raise_exception=True)
 def archivar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
+    
+    if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
+        messages.error(request, "No tienes permisos para archivar actas.")
+        return redirect("actas:detalle", acta_id=acta.id)
     
     if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
         messages.error(request, "No tienes permisos para archivar actas.")

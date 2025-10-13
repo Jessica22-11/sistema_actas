@@ -1,13 +1,16 @@
 # accounts/urls.py
 
-from django.urls import path, reverse_lazy # <-- ¡IMPORTACIÓN NECESARIA!
+from django.urls import path, reverse_lazy
 from django.contrib.auth import views as auth_views
 from . import views
 
+# Define el namespace (espacio de nombres) para esta aplicación. CRÍTICO.
 app_name = "accounts"
 
 urlpatterns = [
-    # Vistas personalizadas existentes
+    # ==========================================================
+    # VISTAS PERSONALIZADAS
+    # ==========================================================
     path("login/", views.login_view, name="login"),
     path("register/", views.register_view, name="register"),
     path("logout/", views.logout_view, name="logout"),
@@ -19,15 +22,16 @@ urlpatterns = [
     path('usuarios/eliminar/<int:user_id>/', views.eliminar_usuario, name='eliminar_usuario'),
     
     # ==========================================================
-    # FLUJO DE RECUPERACIÓN DE CONTRASEÑA (RUTAS CORREGIDAS)
+    # FLUJO DE RECUPERACIÓN DE CONTRASEÑA (CORREGIDO)
     # ==========================================================
     
     # 1. Formulario de Solicitud de Correo: /accounts/password_reset/
-    # Se agrega success_url para evitar el error NoReverseMatch: 'password_reset_done'
+    # Incluye 'email_template_name' para usar una plantilla personalizada que soluciona el NoReverseMatch.
     path('password_reset/',
         auth_views.PasswordResetView.as_view(
             template_name='accounts/password_reset_form.html',
-            success_url=reverse_lazy('accounts:password_reset_done') # <-- CORRECCIÓN CRÍTICA
+            success_url=reverse_lazy('accounts:password_reset_done'), # Redirección a la vista Done con namespace
+            email_template_name='accounts/password_reset_email.html'  # <-- CORRECCIÓN CRÍTICA
         ),
         name='password_reset'),
 
@@ -42,7 +46,8 @@ urlpatterns = [
     # Ruta: /accounts/reset/<uidb64>/<token>/
     path("reset/<uidb64>/<token>/", 
         auth_views.PasswordResetConfirmView.as_view(
-            template_name='accounts/password_reset_confirm.html'
+            template_name='accounts/password_reset_confirm.html',
+            success_url=reverse_lazy('accounts:password_reset_complete') # Redirección a la vista Complete con namespace
         ), 
         name="password_reset_confirm"),
 

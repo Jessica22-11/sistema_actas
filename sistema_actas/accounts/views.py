@@ -3,6 +3,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, ProfileUpdateForm
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, ProfileUpdateForm
 from .models import User
 from django.contrib.auth import update_session_auth_hash
 from django.contrib import messages
@@ -35,6 +36,12 @@ def register_view(request):
             if firma:
                 user.firma_digital = firma
 
+            # ✅ Asignar firma digital si se subió
+            firma = request.FILES.get("firma_digital")
+            if firma:
+                user.firma_digital = firma
+
+            # ✅ Generar username único basado en el email
             # ✅ Generar username único basado en el email
             base_username = user.email.split('@')[0]
             username = base_username
@@ -45,11 +52,16 @@ def register_view(request):
             user.username = username
 
             # ✅ Guardar usuario en la base de datos
+
+            # ✅ Guardar usuario en la base de datos
             user.save()
+
 
             messages.success(request, "✅ Cuenta creada correctamente. Ahora puedes iniciar sesión.")
             return redirect("accounts:login")
+            return redirect("accounts:login")
         else:
+            messages.error(request, "⚠️ Por favor corrige los errores en el formulario.")
             messages.error(request, "⚠️ Por favor corrige los errores en el formulario.")
     else:
         form = CustomUserCreationForm()

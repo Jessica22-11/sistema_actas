@@ -11,48 +11,49 @@
     --sena-dark-green: #2d8000;
 }
 
-/* Fondo y estructura */
+/* === Fondo y estructura general === */
 html, body {
     height: 100%;
     margin: 0;
     padding: 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    font-family: "Poppins", sans-serif;
+    background-attachment: fixed;
 }
 
-/* Contenedor */
+/* contenedor del formulario */
 .login-container {
     min-height: 100vh;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    background: transparent;
+    padding: 1.5rem;
 }
 
-/* Tarjeta */
+/* tarjeta principal */
 .login-card {
     width: 100%;
-    max-width: 750px; /* más pequeño */
+    max-width: 850px;
     background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(8px);
-    border-radius: 18px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 25px 45px rgba(0, 0, 0, 0.15);
     overflow: hidden;
 }
 
-/* Encabezado */
+/* encabezado */
 .login-header {
     background: linear-gradient(135deg, var(--sena-green), var(--sena-dark-green));
     color: white;
     text-align: center;
-    padding: 1.3rem;
+    padding: 2rem 1rem;
 }
 
-/* Logo */
+/* logo circular */
 .sena-logo {
-    width: 65px;
-    height: 65px;
+    width: 75px;
+    height: 75px;
     background: white;
     border-radius: 50%;
     display: flex;
@@ -60,43 +61,48 @@ html, body {
     justify-content: center;
     margin: 0 auto 1rem;
     color: var(--sena-green);
-    font-size: 1.8rem;
+    font-size: 2rem;
 }
 
-/* Formulario */
+/* cuerpo del formulario */
 .login-form {
-    padding: 1.5rem;
+    padding: 2rem;
 }
 
-/* Campos */
 .form-floating {
-    margin-bottom: 0.9rem;
+    margin-bottom: 1.25rem;
 }
 
 .form-control, .form-select {
-    border-radius: 10px;
+    border-radius: 12px;
     border: 2px solid #dee2e6;
-    padding: 0.8rem 1rem;
-    font-size: 0.95rem;
+    padding: 1rem;
+    transition: all 0.3s ease;
 }
 
 .form-control:focus, .form-select:focus {
     border-color: var(--sena-green);
-    box-shadow: 0 0 0 0.15rem rgba(57, 169, 0, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
 }
 
-/* Pasos */
+/* pasos del registro */
 .register-steps {
     display: flex;
     justify-content: center;
-    margin-bottom: 1.2rem;
+    margin-bottom: 1.5rem;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.8rem;
+}
+
+.step {
+    flex: 1;
+    text-align: center;
+    min-width: 80px;
 }
 
 .step-number {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #e9ecef;
     color: #6c757d;
@@ -104,39 +110,36 @@ html, body {
     align-items: center;
     justify-content: center;
     font-weight: 600;
+    margin-bottom: 0.3rem;
 }
 
 .step.active .step-number,
 .step.completed .step-number {
     background: var(--sena-green);
-    color: white;
+    color: #fff;
 }
 
-/* Botón */
-.btn-login {
-    background: linear-gradient(135deg, var(--sena-green), var(--sena-dark-green));
-    border: none;
-    border-radius: 10px;
-    padding: 0.7rem;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
+/* animaciones */
+.form-step {
+    display: none;
+}
+.form-step.active {
+    display: block;
+    animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.btn-login:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(57, 169, 0, 0.3);
-}
-
-/* Responsive */
+/* responsividad */
 @media (max-width: 992px) {
-    .login-card { max-width: 90%; }
-    .login-form { padding: 1.2rem; }
+    .login-card { max-width: 95%; }
+    .login-form { padding: 1.5rem; }
 }
-
-@media (max-height: 850px) {
-    .login-container { align-items: flex-start; padding-top: 1rem; }
-    .login-card { transform: scale(0.95); }
+@media (max-width: 768px) {
+    .login-header { padding: 1.5rem; }
+    .sena-logo { width: 60px; height: 60px; font-size: 1.5rem; }
 }
 </style>
 {% endblock %}

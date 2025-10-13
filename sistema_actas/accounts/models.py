@@ -15,9 +15,12 @@ class User (AbstractUser) :
         ('admin', 'Administrador'),
         ('instructor', 'Instructor'),
         ('aprendiz','Aprendiz'),
+        ('instructor', 'Instructor'),
+        ('aprendiz','Aprendiz'),
     ]
     
     #Sobreescribimos algunos campos de AbstractUser y agrego nuevos campos
+    email = models.EmailField (unique=True, validators=[validate_email])
     email = models.EmailField (unique=True, validators=[validate_email])
     rol = models.CharField (max_length=20, choices=ROLES, default='funcionario')
     centro = models.CharField(max_length=100, default='Centro Minero')
@@ -36,6 +39,7 @@ class User (AbstractUser) :
         verbose_name_plural = 'Usuarios' #Nombre plural en el admin
         ordering = ['first_name', 'last_name'] #Orden por nombre y apellido
 
+    #Validaciones personalizadas segun el rol
     #Validaciones personalizadas segun el rol
     def clean(self):
         super().clean()
@@ -64,6 +68,12 @@ class User (AbstractUser) :
     def save (self, *args, **kwargs):
         #Redimensionar firma digital si es muy grade
         super().save(*args, **kwargs)
+        
+        if self.rol =='admin':
+            self.is_staff = True
+            self.is_superuser = True
+            super().save(*args, **kwargs)
+            
         
         if self.rol =='admin':
             self.is_staff = True
