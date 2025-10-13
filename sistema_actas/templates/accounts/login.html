@@ -6,289 +6,418 @@
 
 {% block extra_css %}
 <style>
-    /* 1. ESTILO CRUCIAL: Aplicar el fondo y el centrado al cuerpo (body) */
-    /* Este CSS anula cualquier estilo de fondo que tenga el base.html */
-    body {
-        min-height: 100vh;
-        /* Su degradado de fondo */
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; 
-        
-        /* Centrado completo del contenido, requerido para su diseño */
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
+/* login.html (dentro de <style>) */
+:root {
+    --sena-green: #39A900;
+    --sena-dark-green: #2d8000;
+}
 
-    /* 2. Esconder cualquier Navbar o Sidebar que pueda tener base.html */
-    /* Busque el selector de su Navbar y Sidebar si existen y póngalo aquí (ejemplo: .main-navbar) */
-    /* .navbar, .sidebar {
-        display: none !important;
-    } */
-
-    /* Estilos para el panel informativo (parte púrpura/azul que se oculta en móviles) */
-    .info-panel {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
-        border-radius: 20px;
-        padding: 2rem;
-        color: white;
-        height: 100%;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-    .info-panel h4, .info-panel h6 { color: white; font-weight: 700; }
-    .info-panel ul { list-style: none; padding-left: 0; margin-top: 1rem; }
-    .info-panel ul li { margin-bottom: 0.5rem; opacity: 0.9; }
-    .info-panel ul li::before {
-        content: "\f00c"; font-family: 'Font Awesome 6 Free'; font-weight: 900;
-        margin-right: 10px; color: var(--sena-green);
-    }
-    /* Estilos de la tarjeta de login y sus elementos */
-    .login-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        box-shadow: 0 25px 45px rgba(0,0,0,0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        overflow: hidden;
-    }
-    .login-header {
-        background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
-        color: white; text-align: center; padding: 2rem;
-    }
-    .sena-logo {
-        width: 80px; height: 80px; background: white; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        margin: 0 auto 1rem; font-size: 2rem; color: var(--sena-green);
-    }
-    .login-form { padding: 2rem; }
-    .form-floating { margin-bottom: 1.5rem; }
-    .form-control {
-        border-radius: 15px; border: 2px solid #e9ecef;
-        padding: 1rem 1.25rem; height: auto; transition: all 0.3s ease;
-    }
-    .form-control:focus {
-        border-color: var(--sena-green); box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
-    }
-    .btn-login {
-        background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
-        border: none; border-radius: 15px; padding: 1rem; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
-    }
-    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(57, 169, 0, 0.3); }
-    .divider { text-align: center; margin: 2rem 0; position: relative; }
-    .divider::before {
-        content: ''; position: absolute; top: 50%; left: 0; right: 0;
-        height: 1px; background: #e9ecef;
-    }
-    .divider span { background: white; padding: 0 1rem; color: #6c757d; position: relative; z-index: 1; }
-    .register-link a { color: var(--sena-green); text-decoration: none; font-weight: 600; }
-    .register-link a:hover { text-decoration: underline; }
-
-    /* Estilos para las formas flotantes */
-    .floating-shapes {
-        position: absolute; width: 100%; height: 100%;
-        overflow: hidden; pointer-events: none;
-    }
-    .shape {
-        position: absolute; background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%; animation: float 6s ease-in-out infinite;
-    }
-    .shape:nth-child(1) { width: 80px; height: 80px; top: 10%; left: 10%; animation-delay: 0s; }
-    .shape:nth-child(2) { width: 120px; height: 120px; top: 70%; right: 10%; animation-delay: 2s; }
-    .shape:nth-child(3) { width: 60px; height: 60px; bottom: 20%; left: 20%; animation-delay: 4s; }
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-20px); }
-    }
-    @media (max-width: 768px) {
-        .login-card { border-radius: 15px; }
-        .login-header, .login-form { padding: 1.5rem; }
-    }
-    /* --- Estilo para el enlace de recuperar contraseña --- */
-    .forgot-link {
-        color: #0d6efd !important; /* Azul Bootstrap */
-        text-decoration: underline;
-        font-weight: 500;
-        transition: color 0.3s ease;
-    }
-    .forgot-link:hover {
-        color: #084298 !important; /* Azul más oscuro */
-    }
-    /* --- Centrar y estilizar el enlace de registro --- */
-    .register-btn {
-        display: inline-block;
-        color: var(--sena-green);
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-    .register-btn:hover {
-        color: var(--sena-dark-green);
-        text-decoration: underline;
-    }
-
-    .login-wrapper {
+/* === Fondo general === */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    font-family: "Poppins", sans-serif;
+}
+
+/* Contenedor principal */
+.login-wrapper {
     min-height: 100vh;
-    justify-content: space-between; /* Header y footer bien distribuidos */
-    }
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
+}
 
+/* Estructura interna */
+.login-main {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 1rem; /* <== Espacio entre paneles ligeramente reducido */
+    width: 100%;
+    max-width: 780px; /* <== Más compacto en general */
+    flex-wrap: wrap;
+}
+
+/* Panel informativo */
+.info-panel {
+    flex: 0 0 280px; /* <== Base fija de 280px, no crecerá */
+    max-width: 280px; /* <== Más pequeño que el login-card */
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 1rem; /* <== Reducido */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.2);
+    font-size: 0.85rem; /* <== Más pequeño */
+}
+
+.info-panel h4 {
+    font-size: 1.2rem; /* <== Ajuste de título */
+    margin-bottom: 0.8rem;
+}
+
+.info-panel p {
+    margin-bottom: 0.8rem;
+}
+
+.info-panel h6 {
+    font-size: 0.9rem; /* <== Ajuste de subtítulo */
+    margin-top: 1rem;
+    margin-bottom: 0.4rem;
+}
+
+.info-panel ul {
+    padding-left: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.info-panel li {
+    margin-bottom: 0.1rem;
+}
+
+.info-panel .bg-warning {
+    padding: 0.8rem !important; /* <== Padding reducido */
+    font-size: 0.8rem; /* <== Más pequeño */
+}
+
+/* Tarjeta del formulario */
+.login-card {
+    flex: 1 1 380px; /* <== Crecerá hasta 380px, base flexible */
+    max-width: 380px; /* <== Un poco más ancho que el info-panel */
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 18px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Encabezado */
+.login-header {
+    background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-dark-green) 100%);
+    color: white;
+    text-align: center;
+    padding: 0.7rem; /* Reducido */
+}
+
+.login-header h3 {
+    font-size: 1.5rem; /* Ajustado */
+    margin-bottom: 0.5rem !important;
+}
+
+.login-header h5 {
+    font-size: 1rem; /* Ajustado */
+}
+
+/* Logo */
+.sena-logo {
+    width: 48px; /* Reducido */
+    height: 48px; /* Reducido */
+    font-size: 1.2rem; /* Reducido */
+    margin: 0 auto 0.5rem;
+}
+
+/* Formulario */
+.login-form {
+    padding: 1rem; /* Reducido */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Campos */
+.form-floating {
+    margin-bottom: 0.6rem; /* Reducido */
+}
+
+.form-control {
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-size: 0.88rem; /* Ligeramente más pequeño */
+}
+
+/* Botón */
+.btn-login {
+    border-radius: 8px;
+    padding: 0.6rem;
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.form-check {
+    margin-bottom: 0.8rem !important; /* Ajuste para espacio */
+}
+
+/* Links */
+.forgot-link, .register-btn {
+    font-size: 0.88rem;
+}
+
+.text-center.mt-3.mb-4 {
+    margin-top: 0.6rem !important;
+    margin-bottom: 0.6rem !important;
+}
+
+.divider.my-2 {
+    margin-top: 0.4rem !important;
+    margin-bottom: 0.4rem !important;
+}
+
+
+/* ===== Responsive ===== */
+@media (max-width: 992px) {
     .login-main {
-        margin-top: -30px;
-        flex-grow: 1;
-        display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        padding: 1rem 0; /* menos margen arriba y abajo */
-        margin: 0; /* eliminamos espacios extra */
+        gap: 1rem;
+        max-width: 90%;
     }
-
-    .container.py-5 {
-        padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
+    .info-panel, .login-card {
+        width: 100%;
+        max-width: 400px; /* Ancho máximo en móvil para ambos */
+        flex-basis: auto; /* Permitir que flex determine el tamaño */
     }
-
-
-    /* Evitar que el body centre todo (dejamos que el wrapper lo haga) */
-    body {
-        display: block !important;
+    .info-panel {
+        font-size: 0.9rem; /* Un poco más grande en móviles para mejor legibilidad */
     }
+    .info-panel h4 {
+        font-size: 1.3rem;
+    }
+    .info-panel h6 {
+        font-size: 1rem;
+    }
+    .info-panel .bg-warning {
+        font-size: 0.85rem;
+    }
+}
 
+@media (max-width: 576px) { /* Móviles más pequeños */
+    .login-wrapper {
+        padding: 0.5rem;
+    }
+    .info-panel, .login-card {
+        padding: 0.8rem;
+    }
+    .login-header {
+        padding: 0.5rem;
+    }
+    .info-panel h4 {
+        font-size: 1.1rem;
+    }
+    .info-panel h6 {
+        font-size: 0.9rem;
+    }
+    .info-panel p, .info-panel ul, .info-panel small {
+        font-size: 0.8rem;
+    }
+    .form-control, .btn-login, .forgot-link, .register-btn {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.8rem;
+    }
+    .form-floating {
+        margin-bottom: 0.5rem;
+    }
+    .form-check {
+        margin-bottom: 0.6rem !important;
+    }
+}
 
+@media (max-height: 700px) {
+    .login-wrapper {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    .login-main {
+        gap: 0.6rem; /* Reducir aún más el espacio entre paneles */
+    }
+    .info-panel {
+        padding: 0.7rem;
+        font-size: 0.8rem;
+        flex: 0 0 250px; /* Aún más pequeño en altura reducida */
+        max-width: 250px;
+    }
+    .info-panel h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0.4rem !important;
+    }
+    .info-panel h6 {
+        font-size: 0.85rem;
+        margin-top: 0.6rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+    .info-panel ul {
+        margin-bottom: 0.2rem;
+    }
+    .info-panel .bg-warning {
+        padding: 0.6rem !important;
+        font-size: 0.75rem;
+    }
+    .login-card {
+        padding-bottom: 0.4rem;
+        max-width: 350px; /* El login card también se ajusta */
+        flex: 1 1 350px;
+    }
+    .login-header {
+        padding: 0.4rem;
+    }
+    .login-header h3 {
+        font-size: 1.3rem;
+        margin-bottom: 0.4rem !important;
+    }
+    .login-header h5 {
+        font-size: 0.85rem;
+    }
+    .sena-logo {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+        margin-bottom: 0.4rem;
+    }
+    .login-form {
+        padding: 0.7rem;
+    }
+    .form-floating {
+        margin-bottom: 0.4rem;
+    }
+    .form-control, .btn-login {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
+    }
+    .form-check {
+        margin-bottom: 0.7rem !important;
+    }
+    .text-center.mt-3.mb-4 {
+        margin-top: 0.4rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    .divider.my-2 {
+        margin-top: 0.3rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+}
 </style>
 {% endblock %}
+
 
 {% block content %}
 <div class="login-wrapper">
     <div class="login-main">
-        <div class="floating-shapes">
-            <div class="shape"></div>
-            <div class="shape"></div>
-            <div class="shape"></div>
+
+        <!-- PANEL IZQUIERDO -->
+        <div class="info-panel">
+            <h4 class="mb-3">
+                <i class="fas fa-file-alt me-2"></i>
+                Sistema de Actas
+            </h4>
+            <p>Transformación digital para la gestión de actas institucionales del Centro Minero SENA.</p>
+            
+            <h6 class="mt-4">Características:</h6>
+            <ul>
+                <li>Procesamiento con Inteligencia Artificial</li>
+                <li>Firmas Electronicas Simples</li>
+                <li>Seguimiento de compromisos</li>
+                <li>Notificaciones automáticas</li>
+                <li>Generación de reportes PDF</li>
+            </ul>
+
+            <div class="mt-4 p-3 bg-warning bg-opacity-25 rounded" style="color: black;">
+                <h6><i class="fas fa-info-circle me-1"></i> Importante</h6>
+                <small>Solo funcionarios con email <strong>@sena.edu.co</strong> pueden acceder. Temporalmente se permite <strong>@gmail.com</strong>.</small>
+            </div>
         </div>
 
-        <div class="container py-5" style="z-index: 10;">
-            <div class="row justify-content-center align-items-center">
-                <div class="col-lg-5 d-none d-lg-block">
-                    <div class="info-panel">
-                        <h4 class="mb-3">
-                            <i class="fas fa-file-alt me-2"></i>
-                            Sistema de Actas
-                        </h4>
-                        <p>Transformación digital para la gestión de actas institucionales del Centro Minero SENA.</p>
-                        
-                        <h6 class="mt-4">Características:</h6>
-                        <ul>
-                            <li>Procesamiento con Inteligencia Artificial</li>
-                            <li>Firmas digitales seguras</li>
-                            <li>Seguimiento de compromisos</li>
-                            <li>Notificaciones automáticas</li>
-                            <li>Generación de reportes PDF</li>
-                            <li>Silencio administrativo</li>
-                        </ul>
+        <!-- PANEL DERECHO -->
+        <div class="login-card">
+            <div class="login-header">
+                <div class="sena-logo">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h3 class="mb-1">Bienvenido</h3>
+                <h5 class="mb-0 opacity-75">Sistema de Gestión de Actas</h5>
+                <small>Centro Minero SENA</small>
+            </div>
 
-                        <div class="mt-4 p-3 bg-warning bg-opacity-25 rounded" style="color: black;">
-                            <h6><i class="fas fa-info-circle me-1"></i> Importante</h6>
-                            <small>Solo funcionarios con email **@sena.edu.co** pueden acceder al sistema. Se permite temporalmente el ingreso con **@gmail.com**.</small>
+            <div class="login-form">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" id="loginForm">
+                    {% csrf_token %}
+                    
+                    <div class="form-floating mb-3">
+                        {{ form.username }}
+                        <label for="email">
+                            <i class="fas fa-envelope me-1"></i>
+                            Correo Institucional
+                        </label>
+                    </div>
+
+                    <div class="form-floating mb-3 position-relative">
+                        {{ form.password }}
+                        <label for="{{ form.password.id_for_label }}">
+                            <i class="fas fa-lock me-1"></i>
+                            Contraseña
+                        </label>
+                        <div class="password-toggle" 
+                            style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d;">
+                            <i class="fas fa-eye" id="togglePassword"></i>
                         </div>
                     </div>
-                </div>
 
-                <div class="col-lg-5 col-md-8 col-sm-10">
-                    <div class="login-card">
-                        <div class="login-header">
-                            <div class="sena-logo">
-                                <i class="fas fa-building"></i>
-                            </div>
-                            <h3 class="mb-1">Bienvenido</h3>
-                            <h5 class="mb-0 opacity-75">Sistema de Gestión de Actas</h5>
-                            <small>Centro Minero SENA</small>
-                        </div>
-
-                        <div class="login-form">
-                            {% if messages %}
-                                {% for message in messages %}
-                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                        <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                                        {{ message }}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-
-                            <form method="post" id="loginForm">
-                                {% csrf_token %}
-                                
-                                <div class="form-floating mb-3">
-                                    {{ form.username }}
-                                    <label for="email">
-                                        <i class="fas fa-envelope me-1"></i>
-                                        Correo Institucional
-                                    </label>
-                                </div>
-
-                                <div class="form-floating mb-3 position-relative">
-                                    {{ form.password }}
-                                    <label for="{{ form.password.id_for_label }}">
-                                        <i class="fas fa-lock me-1"></i>
-                                        Contraseña
-                                    </label>
-                                    <div class="password-toggle" 
-                                        style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6c757d;">
-                                        <i class="fas fa-eye" id="togglePassword"></i>
-                                    </div>
-                                </div>
-
-                                <div class="form-check mb-4">
-                                    <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                                    <label class="form-check-label" for="remember">
-                                        Recordar sesión
-                                    </label>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary btn-login w-100">
-                                    <span class="login-text">
-                                        <i class="fas fa-sign-in-alt me-2"></i>
-                                        Iniciar Sesión
-                                    </span>
-                                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                                </button>
-                            </form>
-                            
-                            <div class="text-center mt-3 mb-4">
-                                <a href="{% url 'accounts:password_reset' %}" class="forgot-link">
-                                    ¿Olvidaste tu contraseña?
-                                </a>
-                            </div>
-
-                            <div class="divider">
-                                <span>¿Primera vez?</span>
-                            </div>
-
-                            <div class="register-link text-center mt-3">
-                                <a href="{% url 'accounts:register' %}" class="register-btn">
-                                    <i class="fas fa-user-plus me-1"></i>
-                                    Registrarse
-                                </a>
-                            </div>
-
-                        </div>
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                        <label class="form-check-label" for="remember">
+                            Recordar sesión
+                        </label>
                     </div>
+
+                    <button type="submit" class="btn btn-primary btn-login w-100">
+                        <span class="login-text">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Iniciar Sesión
+                        </span>
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                </form>
+                
+                <div class="text-center mt-3 mb-4">
+                    <a href="{% url 'accounts:password_reset' %}" class="forgot-link">
+                        ¿Olvidaste tu contraseña?
+                    </a>
                 </div>
 
-                <div class="text-center mt-3 d-lg-none">
-                    <small class="text-white-50">
-                        <i class="fas fa-shield-alt me-1"></i>
-                        Conexión segura y cifrada
-                    </small>
+                <div class="divider text-center text-muted my-2">
+                    <span>¿Primera vez?</span>
+                </div>
+
+                <div class="register-link text-center mt-3">
+                    <a href="{% url 'accounts:register' %}" class="register-btn">
+                        <i class="fas fa-user-plus me-1"></i>
+                        Registrarse
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
+
 
 {% block extra_js %}
 <script>

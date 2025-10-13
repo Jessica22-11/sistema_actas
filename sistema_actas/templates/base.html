@@ -140,15 +140,17 @@
             font-size: 0.95rem;
         }
 
+    /* base.html (dentro de <style> para el footer) */
     /* ===== FOOTER ===== */
     footer {
         background-color: #ffffff;
         border-top: 3px solid var(--sena-green);
-        padding: 1.5rem 0;
+        padding: 1rem 0; /* <== Reducido */
         text-align: center;
         box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.05);
         position: relative;
         z-index: 10;
+        font-size: 0.8rem; /* <== Reducido */
     }
 
     footer p {
@@ -170,14 +172,28 @@
 
     .footer-social a {
         color: var(--sena-green);
-        font-size: 1.3rem;
-        margin: 0 8px;
+        font-size: 1.1rem; /* <== Reducido */
+        margin: 0 6px; /* <== Reducido */
         transition: transform 0.3s ease, color 0.2s ease;
     }
 
     .footer-social a:hover {
         color: var(--sena-dark-green);
         transform: scale(1.2);
+        position: center;
+    }
+
+    /* Media query para móviles en el footer */
+    @media (max-width: 768px) {
+        footer .col-md-6 {
+            text-align: center !important;
+        }
+        footer .mb-3.mb-md-0 {
+            margin-bottom: 1rem !important;
+        }
+        .footer-social {
+            margin-top: 1rem !important;
+        }
     }
 
     .notification-badge {
