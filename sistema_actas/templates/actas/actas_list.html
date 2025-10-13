@@ -91,9 +91,14 @@
                                             
                                             <!-- Enviar a revisión (solo borrador) -->
                                             {% if acta.creador == request.user and acta.estado == "borrador" %}
-                                                <a href="{% url 'actas:enviar_revision' acta.id %}" class="btn btn-sm btn-outline-success" title="Enviar a revisión">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-success" 
+                                                        title="Enviar a revisión"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#modal-enviar-revision-dinamico" 
+                                                        data-acta-id="{{ acta.id }}"> 
                                                     <i class="fas fa-paper-plane"></i>
-                                                </a>
+                                                </button>
                                             {% endif %}
                                             
                                             <!-- Finalizar (solo en revisión) -->
@@ -164,6 +169,30 @@
                         </nav>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Enviar a Revisión Dinámico -->
+<div class="modal fade" id="modal-enviar-revision-dinamico" tabindex="-1" aria-labelledby="modalEnviarRevisionLabelDinamico" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEnviarRevisionLabelDinamico">Enviar Acta a Revisión</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                ¿Estás seguro de que deseas enviar esta acta a revisión? Los participantes recibirán una notificación para firmar el acta. (ID de Acta: <span id="acta-id-display"></span>)
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="form-enviar-revision-dinamico" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-1"></i>Enviar a Revisión
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -270,5 +299,57 @@ function archivarActa(actaId) {
         }
     });
 }
+
+$(document).ready(function() {
+    // 1. Escuchar el evento cuando el modal está a punto de mostrarse
+    $('#modal-enviar-revision-dinamico').on('show.bs.modal', function (event) {
+        // Obtener el botón que activó el modal
+        var button = $(event.relatedTarget); 
+        // Extraer el ID del acta que almacenamos en el atributo 'data-acta-id'
+        var actaId = button.data('acta-id'); 
+        
+        var modal = $(this);
+        var form = modal.find('#form-enviar-revision-dinamico');
+        
+        // Muestra el ID del acta en el modal para confirmación visual
+        modal.find('#acta-id-display').text(actaId);
+
+        // 2. Establecer la URL de acción del formulario
+        // **IMPORTANTE**: Asegúrate de que esta URL coincida con la estructura de tu urls.py
+        var url = `/actas/${actaId}/enviar-revision/`;
+        form.attr('action', url);
+    });
+    
+    // 3. Manejar el envío del formulario con AJAX (Opcional, pero recomendado)
+    $('#form-enviar-revision-dinamico').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: form.serialize(),
+            success: function(response) {
+                // Si la acción es exitosa, muestra un SweetAlert y recarga
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Enviada!',
+                    text: 'El acta ha sido enviada a revisión.',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    window.location.reload(); 
+                });
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ocurrió un error al enviar el acta a revisión.'
+                });
+            }
+        });
+    });
+});
 </script>
 {% endblock %}

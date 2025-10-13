@@ -240,7 +240,6 @@
 </head>
 
 <body>
-    <!-- ===== NAVBAR ===== -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-sena fixed-top py-2">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'core:dashboard' %}">
@@ -251,18 +250,65 @@
                 </div>
             </a>
 
+            {% if user.is_authenticated %}
+            <div class="d-flex d-lg-none me-2"> <ul class="navbar-nav flex-row">
+                    <li class="nav-item dropdown me-2">
+                        <a class="nav-link position-relative" href="#" id="notificationDropdownMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bell"></i>
+                            {% if notifications_count > 0 %}
+                                <span class="notification-badge">{{ notifications_count }}</span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="width: 350px;">
+                            <li class="dropdown-header d-flex justify-content-between align-items-center">
+                                <span>Notificaciones</span>
+                                <small class="text-muted">{{ notifications_count }} nuevas</small>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% for notification in user_notifications %}
+                                <li>
+                                    <a class="dropdown-item py-2" href="{{ notification.get_url }}">
+                                        <div class="d-flex">
+                                            <div class="me-2">
+                                                <i class="fas fa-{{ notification.get_icon }} text-{{ notification.get_color }}"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold">{{ notification.titulo }}</div>
+                                                <small class="text-muted d-block">{{ notification.mensaje|truncatechars:50 }}</small>
+                                                <small class="text-muted">{{ notification.fecha_creacion|timesince }} ago</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                            {% empty %}
+                                <li><span class="dropdown-item-text text-muted">No hay notificaciones nuevas</span></li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-center" href="{% url 'notifications:list' %}">Ver todas</a></li>
+                        </ul>
+                    </li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link" href="{% url 'accounts:profile' %}">
+                            {% if user.firma_digital %}
+                                <img src="{{ user.firma_digital.url }}" class="rounded-circle" style="width:32px;height:32px;object-fit:cover;">
+                            {% else %}
+                                <i class="fas fa-user-circle fs-4"></i>
+                            {% endif %}
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
 
             <button class="navbar-toggler" type="button">
-                <i class="fas fa-bars"></i>
+                <i class="fas fa-bars text-white"></i>
             </button>
-
 
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav align-items-center">
-                    <!-- Notificaciones -->
-                    <li class="nav-item dropdown me-3">
-                        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
+                    <li class="nav-item dropdown me-3 d-none d-lg-block"> <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-bell"></i>
                             {% if notifications_count > 0 %}
                                 <span class="notification-badge">{{ notifications_count }}</span>
@@ -300,7 +346,7 @@
                     </li>
 
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                             {% if user.firma_digital %}
                                 <img src="{{ user.firma_digital.url }}" class="rounded-circle me-2" style="width:32px;height:32px;object-fit:cover;">
                             {% else %}
@@ -332,6 +378,9 @@
             <nav class="nav flex-column">
                 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
                     <i class="fas fa-home"></i>Inicio
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'accounts:profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">
+                    <i class="fas fa-user"></i>Mi Perfil
                 </a>
                 <a class="nav-link" href="{% url 'actas:actas_list' %}">
                     <i class="fas fa-file-alt"></i>Mis Actas

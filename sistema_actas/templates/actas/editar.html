@@ -156,7 +156,7 @@
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input type="text" class="form-control" id="titulo" name="titulo"
-                                           placeholder="Título del acta" value="{{ acta.titulo }}" required>
+                                            placeholder="Título del acta" value="{{ acta.titulo }}" required>
                                     <label for="titulo">Título del Acta</label>
                                 </div>
                             </div>
@@ -176,7 +176,7 @@
                             <div class="col-md-4">
                                 <div class="form-floating">
                                     <input type="datetime-local" class="form-control" id="fecha_reunion"
-                                           name="fecha_reunion" value="{{ acta.fecha_reunion|date:'Y-m-d\\TH:i' }}" required>
+                                            name="fecha_reunion" value="{{ acta.fecha_reunion|date:'Y-m-d\\TH:i' }}" required>
                                     <label for="fecha_reunion">Fecha y Hora</label>
                                 </div>
                             </div>
@@ -229,9 +229,9 @@
                                     </div>
                                     <div class="col-md-5">
                                         <input type="text" class="form-control" 
-                                               name="rol_{{ participante.usuario.email }}" 
-                                               placeholder="Rol en la reunión"
-                                               value="{{ participante.rol_en_reunion }}">
+                                                name="rol_{{ participante.usuario.email }}" 
+                                                placeholder="Rol en la reunión"
+                                                value="{{ participante.rol_en_reunion }}">
                                     </div>
                                     <div class="col-md-1">
                                         <button type="button" class="btn btn-remove btn-sm" onclick="this.parentElement.parentElement.parentElement.remove()">
@@ -256,7 +256,7 @@
                     </div>
                     <div class="card-body">
                         <textarea class="form-control" id="orden_dia" name="orden_dia" rows="4"
-                                  placeholder="Ejemplo:&#10;1. Verificación del quórum&#10;2. Lectura del acta anterior&#10;3. Presentación de informes...">{{ acta.orden_dia }}</textarea>
+                                    placeholder="Ejemplo:&#10;1. Verificación del quórum&#10;2. Lectura del acta anterior&#10;3. Presentación de informes...">{{ acta.orden_dia }}</textarea>
                     </div>
                 </div>
 
@@ -267,7 +267,7 @@
                     </div>
                     <div class="card-body">
                         <textarea class="form-control" id="desarrollo" name="desarrollo" rows="8"
-                                  placeholder="Describe el desarrollo completo de la reunión...">{{ acta.desarrollo }}</textarea>
+                                    placeholder="Describe el desarrollo completo de la reunión...">{{ acta.desarrollo }}</textarea>
                     </div>
                 </div>
 
@@ -286,9 +286,9 @@
                                 <div class="row g-2">
                                     <div class="col-md-5">
                                         <textarea class="form-control" 
-                                                  name="compromiso_desc_{{ forloop.counter }}" 
-                                                  placeholder="Descripción del compromiso" 
-                                                  rows="2" required>{{ compromiso.descripcion }}</textarea>
+                                                    name="compromiso_desc_{{ forloop.counter }}" 
+                                                    placeholder="Descripción del compromiso" 
+                                                    rows="2" required>{{ compromiso.descripcion }}</textarea>
                                     </div>
                                     <div class="col-md-4">
                                         <select class="form-select" name="compromiso_resp_{{ forloop.counter }}" required>
@@ -303,8 +303,8 @@
                                     </div>
                                     <div class="col-md-2">
                                         <input type="date" class="form-control" 
-                                               name="compromiso_fecha_{{ forloop.counter }}"
-                                               value="{{ compromiso.fecha_limite|date:'Y-m-d' }}" required>
+                                                name="compromiso_fecha_{{ forloop.counter }}"
+                                                value="{{ compromiso.fecha_limite|date:'Y-m-d' }}" required>
                                     </div>
                                     <div class="col-md-1">
                                         <button type="button" class="btn btn-remove btn-sm" onclick="this.parentElement.parentElement.parentElement.remove()">
@@ -325,7 +325,7 @@
                     </div>
                     <div class="card-body">
                         <textarea class="form-control" id="observaciones" name="observaciones" rows="3"
-                                  placeholder="Observaciones o notas adicionales">{{ acta.observaciones }}</textarea>
+                                    placeholder="Observaciones o notas adicionales">{{ acta.observaciones }}</textarea>
                     </div>
                 </div>
 
@@ -339,7 +339,7 @@
                             <p>Archivo actual: <a href="{{ acta.archivo_adjunto.url }}" target="_blank" class="text-success">{{ acta.archivo_adjunto.name }}</a></p>
                         {% endif %}
                         <input type="file" class="form-control" id="archivo_adjunto" name="archivo_adjunto"
-                               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
                         <small class="text-muted">Formatos permitidos: PDF, Word, Excel, PowerPoint</small>
                     </div>
                 </div>
@@ -384,7 +384,7 @@
                     </div>
                     <div class="col-md-5">
                         <input type="text" class="form-control" name="rol_new_${participanteCounter}" 
-                               placeholder="Rol en la reunión">
+                                placeholder="Rol en la reunión">
                     </div>
                     <div class="col-md-1">
                         <button type="button" class="btn btn-remove btn-sm" onclick="this.parentElement.parentElement.parentElement.remove()">
@@ -406,7 +406,7 @@
                 <div class="row g-2">
                     <div class="col-md-5">
                         <textarea class="form-control" name="compromiso_desc_${compromisoCounter}" 
-                                  placeholder="Descripción del compromiso" rows="2" required></textarea>
+                                    placeholder="Descripción del compromiso" rows="2" required></textarea>
                     </div>
                     <div class="col-md-4">
                         <select class="form-select" name="compromiso_resp_${compromisoCounter}" required>
