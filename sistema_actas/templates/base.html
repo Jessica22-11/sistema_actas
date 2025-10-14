@@ -235,6 +235,36 @@
             border-radius: 8px;
             font-size: 0.95rem;
         }
+
+        /* ===== BOTÓN FIJO DE AYUDA (MANUAL) ===== */
+        .help-fixed-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px; /* Esquina inferior derecha */
+            width: 50px;
+            height: 50px;
+            background-color: #007bff; /* Azul de Bootstrap */
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            z-index: 1080; /* Alto, pero debajo del botón de accesibilidad (9999) */
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .help-fixed-btn:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        /* Ajuste de estilo para el modo oscuro */
+        .dark-mode .help-fixed-btn {
+            background-color: #1a75ff !important;
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -550,7 +580,7 @@
     </script>
     {% block extra_js %}{% endblock %}
 
-           <!-- ======= PANEL DE ACCESIBILIDAD SENA ======= -->
+        <!-- ======= PANEL DE ACCESIBILIDAD SENA ======= -->
     <style>
     /* Botón flotante de accesibilidad */
     #btnAccesibilidad {
@@ -758,5 +788,12 @@
     window.speechSynthesis.cancel();
     }
     </script>
+
+    <a href="{% static 'docs/manual_usuario.pdf' %}" 
+        target="_blank" 
+        class="help-fixed-btn" 
+        title="Descargar Manual de Usuario">
+        <i class="fas fa-question"></i>
+    </a>
 </body>
 </html>
