@@ -364,7 +364,15 @@
                     </li>
                 </ul>
                 {% else %}
-                    <a href="{% url 'accounts:login' %}" class="btn btn-light btn-sm">Iniciar Sesión</a>
+                    <div>
+                        <button type="button" 
+                            class="btn btn-outline-light btn-sm me-2" 
+                            data-bs-toggle="modal"
+                            data-bs-target="#infoModal"
+                            title="Información del Sistema">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -541,5 +549,214 @@
         document.addEventListener("DOMContentLoaded", checkSiennaLoaded);
     </script>
     {% block extra_js %}{% endblock %}
+
+           <!-- ======= PANEL DE ACCESIBILIDAD SENA ======= -->
+    <style>
+    /* Botón flotante de accesibilidad */
+    #btnAccesibilidad {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: #2e8b57;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 9999;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(57,169,0,0.5); }
+    70% { box-shadow: 0 0 0 12px rgba(57,169,0,0); }
+    100% { box-shadow: 0 0 0 0 rgba(57,169,0,0); }
+    }
+
+    /* Panel lateral */
+    #accesibilidadPanel {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    background-color: #198754;
+    border-radius: 10px;
+    width: 280px;
+    padding: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    display: none;
+    z-index: 9998;
+    color: white;
+    }
+
+    #accesibilidadPanel h5 {
+    text-align: center;
+    margin-bottom: 8px;
+    }
+
+    /* Botones dentro del panel */
+    #accesibilidadPanel button {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #f8f9fa;
+    color: #000;
+    font-weight: bold;
+    padding: 8px;
+    cursor: pointer;
+    }
+
+    #accesibilidadPanel button:hover {
+    background-color: #d9ffd9;
+    }
+
+    /* Estilos para modo oscuro */
+    .dark-mode,
+    .dark-mode * {
+    background-color: #121212 !important;
+    color: #f0f0f0 !important;
+    border-color: #333 !important;
+    }
+    .dark-mode .card,
+    .dark-mode .form-control,
+    .dark-mode .btn {
+    background-color: #1e1e1e !important;
+    color: #f0f0f0 !important;
+    }
+
+    /* Fuente disléxica */
+    @import url('https://cdn.jsdelivr.net/gh/antijingoist/open-dyslexic/open-dyslexic.css');
+    .dyslexic-font, .dyslexic-font * {
+    font-family: 'OpenDyslexic', Arial, sans-serif !important;
+    letter-spacing: 0.5px;
+    }
+
+    /* Resaltado de títulos */
+    .highlight-titles h1,
+    .highlight-titles h2,
+    .highlight-titles h3,
+    .highlight-titles h4,
+    .highlight-titles h5,
+    .highlight-titles h6 {
+    background-color: #ffe066;
+    color: #000 !important;
+    text-decoration: underline;
+    padding: 4px 6px;
+    border-radius: 5px;
+    }
+    </style>
+
+    <!-- Botón flotante -->
+    <button id="btnAccesibilidad" title="Opciones de accesibilidad">♿</button>
+
+    <!-- Panel -->
+    <div id="accesibilidadPanel">
+    <h5>♿ Accesibilidad</h5>
+    <button onclick="toggleDarkMode()">🌙 Modo oscuro</button>
+    <button onclick="toggleHighContrast()">⚫ Alto contraste</button>
+    <button onclick="aumentarTexto()">🔍 Aumentar texto</button>
+    <button onclick="reducirTexto()">🔎 Reducir texto</button>
+    <button onclick="toggleDyslexicFont()">📖 Fuente Disléxica</button>
+    <button onclick="toggleHighlightTitles()">✨ Resaltar títulos</button>
+    <button onclick="leerTexto()">🔊 Lectura de texto</button>
+    <button onclick="restablecer()">♻️ Restablecer</button>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+    let darkMode = false;
+    let highContrast = false;
+    let dyslexic = false;
+    let highlighted = false;
+    let currentSize = 100;
+
+    // Mostrar/ocultar panel
+    document.getElementById('btnAccesibilidad').addEventListener('click', () => {
+    const panel = document.getElementById('accesibilidadPanel');
+    panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
+    });
+
+    // Modo oscuro
+    function toggleDarkMode() {
+    darkMode = !darkMode;
+    document.body.classList.toggle('dark-mode', darkMode);
+    }
+
+    // Alto contraste
+    function toggleHighContrast() {
+    highContrast = !highContrast;
+    document.body.style.filter = highContrast ? 'contrast(1.8)' : 'contrast(1)';
+    }
+
+    // Aumentar texto
+    function aumentarTexto() {
+    currentSize += 10;
+    document.body.style.fontSize = currentSize + '%';
+    }
+
+    // Reducir texto
+    function reducirTexto() {
+    currentSize = Math.max(80, currentSize - 10);
+    document.body.style.fontSize = currentSize + '%';
+    }
+
+    // Fuente disléxica
+    function toggleDyslexicFont() {
+    dyslexic = !dyslexic;
+    document.body.classList.toggle('dyslexic-font', dyslexic);
+    }
+
+    // Resaltar títulos
+    function toggleHighlightTitles() {
+    highlighted = !highlighted;
+    document.body.classList.toggle('highlight-titles', highlighted);
+    }
+
+    function leerTexto() {
+    const texto = document.body.innerText;
+    const mensaje = new SpeechSynthesisUtterance(texto);
+    mensaje.lang = 'es-CO'; // español de Colombia por defecto
+    mensaje.rate = 1;
+    mensaje.pitch = 1;
+
+    // Buscar voz en español disponible
+    const voces = window.speechSynthesis.getVoices();
+    const vozEspanol = voces.find(v => v.lang.startsWith('es'));
+    if (vozEspanol) {
+        mensaje.voice = vozEspanol;
+    } else {
+        console.warn("⚠️ No se encontró una voz en español, usando por defecto.");
+    }
+
+    // Detener lectura anterior y reproducir
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(mensaje);
+    }
+
+    let leyendo = false;
+
+    function alternarLectura() {
+    if (!leyendo) {
+        leerTexto();
+        leyendo = true;
+    } else {
+        window.speechSynthesis.cancel();
+        leyendo = false;
+    }
+    }
+
+    // Restablecer
+    function restablecer() {
+    document.body.classList.remove('dark-mode', 'dyslexic-font', 'highlight-titles');
+    document.body.style.filter = 'none';
+    document.body.style.fontSize = '100%';
+    darkMode = highContrast = dyslexic = highlighted = false;
+    currentSize = 100;
+    window.speechSynthesis.cancel();
+    }
+    </script>
 </body>
 </html>

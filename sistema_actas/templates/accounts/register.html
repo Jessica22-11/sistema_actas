@@ -11,7 +11,7 @@
     --sena-dark-green: #2d8000;
 }
 
-/* === Fondo y estructura general === */
+/* === Fondo general === */
 html, body {
     height: 100%;
     margin: 0;
@@ -20,89 +20,91 @@ html, body {
     background-attachment: fixed;
 }
 
-/* contenedor del formulario */
+/* Contenedor principal centrado */
 .login-container {
     min-height: 100vh;
-    width: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: transparent;
+    justify-content: center; /* ⬅️ Esto asegura el centrado horizontal */
     padding: 1.5rem;
 }
 
-/* tarjeta principal */
+/* Tarjeta principal */
 .login-card {
     width: 100%;
-    max-width: 850px;
+    max-width: 700px;
+    margin: 0 auto; /* ⬅️ Asegura que quede centrada dentro de su columna */
     background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(8px);
-    border-radius: 20px;
-    box-shadow: 0 25px 45px rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 
-/* encabezado */
+/* Contenedor interno para corregir desplazamientos Bootstrap */
+.container > .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    justify-content: center !important;
+} /* ⬅️ Asegura centrado */
+
+/* === Encabezado === */
 .login-header {
     background: linear-gradient(135deg, var(--sena-green), var(--sena-dark-green));
     color: white;
     text-align: center;
-    padding: 2rem 1rem;
+    padding: 1.5rem;
 }
 
-/* logo circular */
 .sena-logo {
-    width: 75px;
-    height: 75px;
+    width: 65px;
+    height: 65px;
     background: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 1rem;
+    margin: 0 auto 0.8rem;
     color: var(--sena-green);
-    font-size: 2rem;
+    font-size: 1.8rem;
 }
 
-/* cuerpo del formulario */
+/* === Formulario === */
 .login-form {
-    padding: 2rem;
+    padding: 1.8rem;
 }
 
+/* === Inputs === */
 .form-floating {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
 }
-
 .form-control, .form-select {
     border-radius: 12px;
-    border: 2px solid #dee2e6;
-    padding: 1rem;
+    border: 1.5px solid #dee2e6;
+    padding: 0.9rem;
     transition: all 0.3s ease;
 }
-
 .form-control:focus, .form-select:focus {
     border-color: var(--sena-green);
-    box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
+    box-shadow: 0 0 0 0.15rem rgba(57, 169, 0, 0.25);
 }
 
-/* pasos del registro */
+/* === Pasos === */
 .register-steps {
     display: flex;
     justify-content: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
     flex-wrap: wrap;
-    gap: 0.8rem;
+    gap: 0.6rem;
 }
-
 .step {
     flex: 1;
     text-align: center;
-    min-width: 80px;
+    min-width: 60px;
 }
-
 .step-number {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: #e9ecef;
     color: #6c757d;
@@ -110,16 +112,15 @@ html, body {
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.2rem;
 }
-
 .step.active .step-number,
 .step.completed .step-number {
     background: var(--sena-green);
     color: #fff;
 }
 
-/* animaciones */
+/* === Animaciones === */
 .form-step {
     display: none;
 }
@@ -132,14 +133,38 @@ html, body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* responsividad */
+/* === Responsividad === */
 @media (max-width: 992px) {
-    .login-card { max-width: 95%; }
-    .login-form { padding: 1.5rem; }
+    .login-card { max-width: 90%; }
 }
 @media (max-width: 768px) {
-    .login-header { padding: 1.5rem; }
-    .sena-logo { width: 60px; height: 60px; font-size: 1.5rem; }
+    .login-card {
+        max-width: 95%;
+        border-radius: 12px;
+    }
+    .login-header {
+        padding: 1rem;
+    }
+    .sena-logo {
+        width: 55px;
+        height: 55px;
+        font-size: 1.4rem;
+    }
+    .login-form {
+        padding: 1rem;
+    }
+    .row > [class*="col-"] {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    .btn {
+        width: 100%; /* Botones ocupan todo el ancho */
+    }
+}
+@media (max-width: 480px) {
+    h3 { font-size: 1.2rem; }
+    h5 { font-size: 1rem; }
+    .form-floating label { font-size: 0.85rem; }
 }
 </style>
 {% endblock %}
