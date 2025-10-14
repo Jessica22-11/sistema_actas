@@ -1,3 +1,5 @@
+import os
+import shutil
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
@@ -13,6 +15,9 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from datetime import timedelta 
 from datetime import datetime
+from django.conf import settings
+from django.core.management import call_command
+from django.http import FileResponse
 
 
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
@@ -329,7 +334,6 @@ def procesar_con_ia(request):
             {"success": False, "message": f"Error al procesar con IA: {str(e)}"}
         )
 
-
 @login_required
 def generar_pdf(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
@@ -340,7 +344,7 @@ def generar_pdf(request, acta_id):
         or acta.participantes.filter(usuario=request.user).exists()
         or request.user.is_staff
     ):
-        messages.error(request, "No tienes permiso para desargar esta acta.")
+        messages.error(request, "No tienes permiso para descargar esta acta.")
         return redirect("actas:list")
 
     # Crear PDF
@@ -350,46 +354,51 @@ def generar_pdf(request, acta_id):
     )
 
     doc = SimpleDocTemplate(response, pagesize=letter)
-    style = getSampleStyleSheet()
+    styles = getSampleStyleSheet()
     story = []
 
     # Estilo personalizado para el encabezado
     title_style = ParagraphStyle(
         "CustomTitle",
-        parent=style["Title"],
+        parent=styles["Title"],
         fontSize=16,
-        spaceAfter=30,
+        spaceAfter=20,
         alignment=1,  # Centrado
     )
 
+    body_style = styles["Normal"]
+    body_style.wordWrap = "CJK"  # Permite el ajuste de línea en palabras largas
+
     # Encabezado
-    story.append(Paragraph("SERVICIO NACIONAL DE APRENDIZAJE- SENA", title_style))
+    story.append(Paragraph("SERVICIO NACIONAL DE APRENDIZAJE - SENA", title_style))
     story.append(Paragraph("CENTRO MINERO", title_style))
     story.append(Paragraph(f"ACTA DE REUNIÓN - {acta.numero_acta}", title_style))
-    story.append(Paragraph(Spacer(1, 20)))
+    story.append(Spacer(1, 20))
 
     # Información general
     info_data = [
-        ["Título:", acta.titulo],
+        ["Título:", Paragraph(acta.titulo, body_style)],
         ["Tipo de Reunión:", acta.get_tipo_reunion_display()],
         ["Fecha y Hora:", acta.fecha_reunion.strftime("%d/%m/%Y %H:%M")],
-        ["Lugar:", acta.lugar_reunion],
+        ["Lugar:", Paragraph(acta.lugar_reunion, body_style)],
         ["Modalidad:", acta.get_modalidad_display()],
         ["Estado:", acta.get_estado_display()],
     ]
 
-    info_table = Table(info_data, colWidths=[2 * inch, 4 * inch])
+    info_table = Table(info_data, colWidths=[1.5 * inch, 4.5 * inch])
     info_table.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
                 ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                 ("FONTNAME", (1, 0), (-1, -1), "Helvetica"),
                 ("FONTSIZE", (0, 0), (-1, -1), 10),
-                ("GRID", (0, 0), (-1, -1), colors.black),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                # --- CORRECCIÓN AQUÍ ---
+                # Se agregó el grosor de línea (1) que faltaba en el comando GRID.
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]
         )
     )
@@ -397,7 +406,7 @@ def generar_pdf(request, acta_id):
     story.append(Spacer(1, 20))
 
     # Participantes
-    story.append(Paragraph("PARTICIPANTES", style["Heading2"]))
+    story.append(Paragraph("PARTICIPANTES", styles["Heading2"]))
     participantes_data = [["Nombre", "Email", "Rol", "Firmado"]]
 
     for participante in acta.participantes.select_related("usuario").all():
@@ -408,6 +417,7 @@ def generar_pdf(request, acta_id):
                 participante.usuario.get_full_name(),
                 participante.usuario.email,
                 participante.rol_en_reunion or "-",
+                firmado,  # Se corrigió para que muestre el valor de la variable
             ]
         )
 
@@ -434,29 +444,28 @@ def generar_pdf(request, acta_id):
 
     # Orden del día
     if acta.orden_dia:
-        story.append(Paragraph("ORDEN DEL DÍA", style["Heading2"]))
-        story.append(Paragraph(acta.orden_dia.replace("\n", "<br/>"), style["Normal"]))
+        story.append(Paragraph("ORDEN DEL DÍA", styles["Heading2"]))
+        story.append(Paragraph(acta.orden_dia.replace("\n", "<br/>"), body_style))
         story.append(Spacer(1, 15))
 
     # Desarrollo
     if acta.desarrollo:
-        story.append(Paragraph("DESARROLLO DE LA REUNIÓN", style["Heading2"]))
-        story.append(Paragraph(acta.desarrollo.replace("\n", "<br/>"), style["Normal"]))
+        story.append(Paragraph("DESARROLLO DE LA REUNIÓN", styles["Heading2"]))
+        story.append(Paragraph(acta.desarrollo.replace("\n", "<br/>"), body_style))
         story.append(Spacer(1, 15))
 
     # Compromisos
     if acta.compromisos.exists():
-        story.append(Paragraph("COMPROMISOS", style["Heading2"]))
+        story.append(Paragraph("COMPROMISOS", styles["Heading2"]))
         compromisos_data = [["Descripción", "Responsable", "Fecha Límite", "Estado"]]
 
         for compromiso in acta.compromisos.select_related("responsable").all():
+            # Mejora: Usar Paragraph para que el texto largo se ajuste automáticamente
+            descripcion_paragraph = Paragraph(compromiso.descripcion, body_style)
+
             compromisos_data.append(
                 [
-                    (
-                        compromiso.descripcion[:50] + "..."
-                        if len(compromiso.descripcion) > 50
-                        else compromiso.descripcion
-                    ),
+                    descripcion_paragraph,
                     compromiso.responsable.get_full_name(),
                     compromiso.fecha_limite.strftime("%d/%m/%Y"),
                     compromiso.get_estado_display(),
@@ -472,48 +481,60 @@ def generar_pdf(request, acta_id):
                     ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
                     ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
                     ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                     ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
                     ("FONTSIZE", (0, 0), (-1, -1), 9),
                     ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ]
             )
         )
-
         story.append(compromisos_table)
         story.append(Spacer(1, 20))
 
-        # Observaciones
-        if acta.observaciones:
-            story.append(Paragraph("OBSERVACIONES", style["Heading2"]))
-            story.append(
-                Paragraph(acta.observaciones.replace("\n", "<br/>"), style["Normal"])
-            )
-            story.append(Spacer(1, 15))
+    # --- CORRECCIÓN DE INDENTACIÓN ---
+    # Los siguientes bloques (Observaciones, Firmas, Pie de página y la construcción del PDF)
+    # se han movido fuera del bloque `if acta.compromisos.exists():`.
+    # Esto asegura que el PDF se genere siempre, incluso si no hay compromisos.
 
-        # Firmas
-        story.append(Paragraph("FIRMAS", style["Heading2"]))
-        if acta.silencio_administrativo:
-            story.append(
-                Paragraph(
-                    "* Algunas firmas fueron aplicadas por silencio administrativo",
-                    style["Italic"],
-                )
-            )
-        story.append(Spacer(1, 20))
+    # Observaciones
+    if acta.observaciones:
+        story.append(Paragraph("OBSERVACIONES", styles["Heading2"]))
+        story.append(Paragraph(acta.observaciones.replace("\n", "<br/>"), body_style))
+        story.append(Spacer(1, 15))
 
-        # Pie de pagina
+    # Firmas
+    story.append(Paragraph("FIRMAS", styles["Heading2"]))
+    if acta.silencio_administrativo:
         story.append(
             Paragraph(
-                f"Documento generado el {timezone.now().strftime('%d/%m/%Y %H:%M')}",
-                style["Normal"],
+                "* Algunas firmas fueron aplicadas por silencio administrativo.",
+                styles["Italic"],
             )
         )
-        story.append(Paragraph("Centro Minero - SENA", style["Normal"]))
+    story.append(Spacer(1, 40))  # Más espacio para firmas manuales si es necesario
 
+    # Pie de pagina
+    footer_style = styles["Normal"]
+    footer_style.alignment = 1  # Centrado
+    story.append(
+        Paragraph(
+            f"Documento generado el {timezone.now().strftime('%d/%m/%Y %H:%M')}",
+            footer_style,
+        )
+    )
+    story.append(Paragraph("Centro Minero - SENA", footer_style))
+
+    try:
         doc.build(story)
-        return response
+    except Exception as e:
+        # Es una buena práctica registrar el error si algo más falla
+        print(f"Error al construir el PDF: {e}")
+        messages.error(request, "Ocurrió un error inesperado al generar el PDF.")
+        return redirect("actas:list")
+
+    return response
+
 
 @login_required
 def actas_list(request):
@@ -916,3 +937,58 @@ def aprendiz_compromisos(request):
         'titulo': "Mis compromisos asignados"
     }
     return render(request, 'actas/aprendiz/compromisos.html', context)
+
+def crear_copia_seguridad(request):
+    try:
+        # Ruta base del proyecto
+        base_dir = settings.BASE_DIR
+        # Carpeta donde se guardará el backup
+        backups_dir = os.path.join(base_dir, "backups")
+        os.makedirs(backups_dir, exist_ok=True)
+
+        # Nombre del archivo de backup con fecha
+        fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"backup_{fecha}.zip"
+        backup_path = os.path.join(backups_dir, backup_filename)
+
+        # Archivos o carpetas a incluir en el backup
+        incluir = ["db.sqlite3", "actas", "accounts", "core"]
+
+        shutil.make_archive(backup_path.replace(".zip", ""), "zip", base_dir)
+
+        return JsonResponse(
+            {"mensaje": f"Copia de seguridad creada: {backup_filename}"}
+        )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def generar_backup(request):
+    try:
+        # Ejecuta el comando personalizado
+        call_command("backup_db")
+
+        # Busca el archivo más reciente
+        backups_dir = os.path.join(settings.BASE_DIR, "backups")
+        files = sorted(
+            [
+                os.path.join(backups_dir, f)
+                for f in os.listdir(backups_dir)
+                if f.endswith(".zip")
+            ],
+            key=os.path.getmtime,
+            reverse=True,
+        )
+
+        if files:
+            latest_backup = files[0]
+            response = FileResponse(open(latest_backup, "rb"))
+            response["Content-Disposition"] = (
+                f'attachment; filename="{os.path.basename(latest_backup)}"'
+            )
+            return response
+        else:
+            return HttpResponse("No se encontró ningún backup.", status=404)
+
+    except Exception as e:
+        return HttpResponse(f"Error al generar el backup: {str(e)}", status=500)

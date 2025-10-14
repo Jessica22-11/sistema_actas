@@ -1,5 +1,45 @@
+// === Funciones utilitarias globales ===
+
+// Muestra un botón con estado de carga
+function showButtonLoading($btn, text) {
+  const originalText = $btn.html();
+  $btn.prop("disabled", true);
+  $btn.html(
+    `<span class="spinner-border spinner-border-sm me-2" role="status"></span>${text}`
+  );
+  return originalText;
+}
+
+// Restaura el estado original del botón
+function hideButtonLoading($btn, originalText) {
+  $btn.prop("disabled", false);
+  $btn.html(originalText);
+}
+
+// Mostrar alerta reutilizable
+function showAlert(message, type = "success") {
+  const alertClass =
+    type === "error"
+      ? "alert-danger"
+      : type === "warning"
+      ? "alert-warning"
+      : "alert-success";
+
+  const alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+
+  $("#alerts-container").html(alertHtml);
+  setTimeout(() => $(".alert").alert("close"), 5000);
+}
+
 // Funcionalidad específica para el módulo de actas
-console.log("El archivo JavaScript de ActasManager se ha cargado correctamente.");
+console.log(
+  "El archivo JavaScript de ActasManager se ha cargado correctamente."
+);
 class ActasManager {
   constructor() {
     this.initializeEventListeners();
@@ -69,54 +109,61 @@ class ActasManager {
     const $btn = $("#btn-procesar-ia");
     const originalText = showButtonLoading($btn, "Procesando con IA...");
 
-    // Mostrar indicador de procesamiento IA
+    // Mostrar indicador visual
     $("#ai-processing-indicator").removeClass("d-none");
 
     $.ajax({
-      url: "/actas/procesar-ia/",
+      url: "/actas/procesar-ia/", // ✅ Asegúrate de que esta ruta coincida con tu URL Django
       method: "POST",
       data: {
         resumen: resumen,
         csrfmiddlewaretoken: $("[name=csrfmiddlewaretoken]").val(),
       },
       success: (response) => {
+        console.log("📤 Datos enviados a la IA:", resumen);
+        console.log("📥 Respuesta JSON completa:", response);
+
         if (response.success) {
-          // Llenar campos con datos de IA
-          $("#orden_dia").val(response.data.orden_dia);
+          // ✅ Mostrar el contenido generado
+          const contenido =
+            response.data.contenido || "⚠️ No se generó contenido";
 
-          // Si hay CKEditor para el desarrollo
           if (CKEDITOR.instances.desarrollo) {
-            CKEDITOR.instances.desarrollo.setData(response.data.desarrollo);
+            CKEDITOR.instances.desarrollo.setData(contenido);
           } else {
-            $("#desarrollo").val(response.data.desarrollo);
+            $("#desarrollo").val(contenido);
           }
 
-          // Agregar compromisos sugeridos
-          if (response.data.compromisos_sugeridos) {
-            response.data.compromisos_sugeridos.forEach((compromiso, index) => {
-              setTimeout(() => {
-                this.agregarCompromisoSugerido(compromiso);
-              }, index * 200);
-            });
+          // Si deseas llenar el orden del día con texto IA también:
+          if (response.data.orden_dia) {
+            $("#orden_dia").val(response.data.orden_dia);
           }
 
-          this.showAlert("¡Acta procesada exitosamente con IA!", "success");
+          this.showAlert("✅ Acta generada exitosamente con IA", "success");
 
-          // Efecto visual en los campos actualizados
-          $("#orden_dia, #desarrollo").addClass("updated-by-ai");
-          setTimeout(() => {
-            $(".updated-by-ai").removeClass("updated-by-ai");
-          }, 3000);
+          // Activar el siguiente paso si existe
+          $("#btn-next-step-2").prop("disabled", false);
+
+          // Efecto visual en campos actualizados
+          $("#desarrollo, #orden_dia").addClass("updated-by-ai");
+          setTimeout(
+            () => $(".updated-by-ai").removeClass("updated-by-ai"),
+            3000
+          );
         } else {
-          this.showAlert(response.message, "error");
+          this.showAlert(
+            response.message || "Error en la respuesta de la IA",
+            "error"
+          );
         }
       },
       error: (xhr, status, error) => {
+        console.error("❌ Error al procesar con IA:", error);
+        console.error("Detalles:", xhr.responseText);
         this.showAlert(
           "Error al procesar con IA. Inténtelo nuevamente.",
           "error"
         );
-        console.error("Error:", error);
       },
       complete: () => {
         hideButtonLoading($btn, originalText);
@@ -211,7 +258,7 @@ class ActasManager {
                 </div>
             </div>
         `;
-        console.log("Agregando HTML del participante al contenedor.");
+    console.log("Agregando HTML del participante al contenedor.");
     $("#participantes-container").append(participanteHtml);
 
     // Animar entrada
@@ -236,7 +283,7 @@ class ActasManager {
                         <label class="form-label">Fecha Límite</label>
                         <input type="date" class="form-control compromiso-fecha" 
                               min="${
-                                  new Date().toISOString().split("T")[0]
+                                new Date().toISOString().split("T")[0]
                               }" required>
                     </div>
                     <div class="col-md-1 d-flex align-items-end">
@@ -470,4 +517,4 @@ $(document).ready(() => {
     }
   });
 });
-console.log("jQuery cargado:", typeof jQuery !== 'undefined');
+console.log("jQuery cargado:", typeof jQuery !== "undefined");

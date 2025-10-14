@@ -10,12 +10,23 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import os # Modulo para interpretar el sistema operativo
-from decouple import config # Permite manejar variables de entorno desde .env
-from pathlib import Path # Para manejanvr rutas del sistema de forma segura
+import os  # Modulo para interpretar el sistema operativo
+from decouple import config  # Permite manejar variables de entorno desde .env
+from pathlib import Path  # Para manejanvr rutas del sistema de forma segura
+import os  # Modulo para interpretar el sistema operativo
+from decouple import config  # Permite manejar variables de entorno desde .env
+from pathlib import Path  # Para manejanvr rutas del sistema de forma segura
+from dotenv import load_dotenv  # Cargar variables de entorno desde .env
+
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not OPENAI_API_KEY:
+    raise ValueError("API Key de OpenAI no configurada")
 
 LOGS_DIR = os.path.join("logs")
-os.makedirs(LOGS_DIR, exist_ok=True) # crea la carpeta automáticamente si no existe
+os.makedirs(LOGS_DIR, exist_ok=True)  # crea la carpeta automáticamente si no existe
 
 
 # Base del proyecto
@@ -147,7 +158,10 @@ USE_TZ = True  # Manejo de zonas horarias
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"  # Para produccion
-STATICFILES_DIRS = [BASE_DIR / "static"]  # Para desarrollo
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+    BASE_DIR / "core",  # 👈 importante, para que Django sirva también core/js/
+]
 
 MEDIA_URL = "/media/"  # Archivos subidos por usuarios
 MEDIA_ROOT = BASE_DIR / "media"
@@ -180,19 +194,17 @@ CKEDITOR_CONFIGS = {
     },
 }
 
-# Configuracion de Email
-# ====================================================================
-# CONFIGURACIÓN FINAL: Forzando SMTP para envío real de correos.
-# ====================================================================
+# Configuración de Correo (Cargando solo las variables del entorno)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"  # Valor fijo
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com") # Se lee del .env o usa default
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", 'True').lower() in ('true', '1', 't')
+EMAIL_USE_SSL = False # Valor fijo
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-
-EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
-EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-
+# Credenciales de Autenticación
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER") # Debe ser cargado del .env
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD") # Debe ser cargado del .env
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@tudominio.com")
 
 # Celery + Redis (tareas asincronas)
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://172.25.59.213:6379/0")
@@ -296,8 +308,10 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"  # Después de logout vuelve al login
 # CONFIGURACIÓN DE AUTENTICACIÓN Y SEGURIDAD ADICIONAL
 # ==============================================================================
 
-PASSWORD_RESET_TIMEOUT = 3600 
-PASSWORD_RESET_COMPLETE_URL = '/accounts/login/' 
+PASSWORD_RESET_TIMEOUT = 3600
+PASSWORD_RESET_COMPLETE_URL = "/accounts/login/"
+PASSWORD_RESET_TIMEOUT = 3600
+PASSWORD_RESET_COMPLETE_URL = "/accounts/login/"
 
 
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-responder@sena.edu.co")

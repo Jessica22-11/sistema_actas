@@ -15,6 +15,7 @@ urlpatterns = [
     path("<int:acta_id>/finalizar/", views.finalizar_acta, name="finalizar"),
     path("<int:acta_id>/archivar/", views.archivar_acta, name="archivar"),
     path("firmas-pendientes/", views.firmas_pendientes, name="firmas_pendientes"),
+    
     path("procesar-ia/", views.procesar_con_ia, name="procesar_ia"),
 
     # Rutas de compromisos
@@ -27,4 +28,7 @@ urlpatterns = [
     # Rutas para aprendices
     path("aprendiz/pendientes/", views.aprendiz_pendientes, name="aprendiz_pendientes"),
     path("aprendiz/compromisos/", views.aprendiz_compromisos, name="aprendiz_compromisos"),
+    path("backup/", views.crear_copia_seguridad, name="crear_backup"),
+    # otras rutas...
+    path("generar-backup/", views.generar_backup, name="generar_backup"),
 ]

@@ -4,6 +4,12 @@ venv/
 # Configuración sensible
 .env
 
+# Ignorar backups locales
+sistema_actas/backups/*.zip
+
+# desde la raíz del repo
+echo "sistema_actas/backups/*.zip" >> .gitignore
+
 # Archivos compilados
 __pycache__/
 *.pyc
