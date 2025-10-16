@@ -163,3 +163,27 @@ def restaurar_backup(request, nombre_archivo):
         messages.error(request, f"❌ Error al restaurar '{nombre_archivo}': {str(e)}")
 
     return redirect("core:vista_backup")
+
+@login_required
+def eliminar_copia_seguridad(request, nombre_archivo):
+    """
+    Elimina un archivo de copia de seguridad específico.
+    """
+    # Construir la ruta completa y segura al archivo
+    ruta_backup = os.path.join(BACKUP_DIR, nombre_archivo)
+
+    # 1. Verificar que el archivo realmente existe antes de intentar borrarlo
+    if not os.path.exists(ruta_backup):
+        messages.error(request, f"❌ El archivo de backup '{nombre_archivo}' no fue encontrado.")
+        return redirect("core:vista_backup")
+
+    try:
+        # 2. Eliminar el archivo del sistema
+        os.remove(ruta_backup)
+        messages.success(request, f"🗑️ La copia de seguridad '{nombre_archivo}' ha sido eliminada correctamente.")
+    except Exception as e:
+        # 3. Capturar cualquier error inesperado durante la eliminación
+        messages.error(request, f"❌ Error al eliminar el archivo '{nombre_archivo}': {str(e)}")
+
+    # 4. Redirigir siempre a la lista de backups
+    return redirect("core:vista_backup")

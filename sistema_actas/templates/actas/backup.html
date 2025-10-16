@@ -42,6 +42,11 @@
                                 onclick="return confirm('¿Seguro que deseas restaurar este backup? Se sobrescribirán los datos actuales.')">
                                 🔄 Restaurar
                             </a>
+                            <a href="{% url 'core:eliminar_copia_seguridad' archivo.nombre %}" 
+                                class="btn btn-danger btn-sm ms-2"
+                                onclick="return confirm('¿Estás seguro de que quieres eliminar este archivo de forma permanente? Esta acción no se puede deshacer.')">
+                                🗑️ Eliminar
+                            </a>
                         </td>
                     </tr>
                 {% endfor %}
