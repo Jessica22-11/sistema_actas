@@ -18,6 +18,8 @@ from datetime import datetime
 from django.conf import settings
 from django.core.management import call_command
 from django.http import FileResponse
+from reportlab.platypus import Image
+from reportlab.lib.units import inch
 
 
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
@@ -25,6 +27,8 @@ from core.utils import generar_acta_con_ia, enviar_notificacion_participantes
 from notifications.models import Notification
 from accounts.models import User
 from .forms import ReporteCompromisoForm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 
 # Create your views here.
@@ -512,7 +516,44 @@ def generar_pdf(request, acta_id):
                 styles["Italic"],
             )
         )
-    story.append(Spacer(1, 40))  # Más espacio para firmas manuales si es necesario
+    story.append(Spacer(1, 20))  # Espacio antes de mostrar las firmas
+
+    # Tabla de firmas con imágenes
+    from reportlab.platypus import Image
+
+    firmas_data = []
+    for firma in acta.firmas.select_related("usuario").all():
+        usuario = firma.usuario.get_full_name() or firma.usuario.username
+        texto_firma = Paragraph(usuario, styles["Normal"])
+
+        if firma.firmado and firma.firma_imagen:
+            try:
+                img = Image(firma.firma_imagen.path, width=2.5 * inch, height=1 * inch)
+                firmas_data.append([img, texto_firma])
+            except Exception as e:
+                print(f"Error al cargar firma de {usuario}: {e}")
+                firmas_data.append([Paragraph("(No se pudo cargar la firma)", styles["Normal"]), texto_firma])
+        else:
+            firmas_data.append([Paragraph("(Pendiente de firma)", styles["Normal"]), texto_firma])
+
+    if firmas_data:
+        firmas_table = Table(firmas_data, colWidths=[3 * inch, 3 * inch])
+        firmas_table.setStyle(
+            TableStyle(
+                [
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("BOX", (0, 0), (-1, -1), 0.5, colors.gray),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.lightgrey),
+                ]
+            )
+        )
+        story.append(firmas_table)
+    else:
+        story.append(Paragraph("No se registraron firmas para esta acta.", styles["Normal"]))
+
+    story.append(Spacer(1, 40))  # Espacio extra después de las firmas
+
 
     # Pie de pagina
     footer_style = styles["Normal"]
@@ -937,58 +978,3 @@ def aprendiz_compromisos(request):
         'titulo': "Mis compromisos asignados"
     }
     return render(request, 'actas/aprendiz/compromisos.html', context)
-
-def crear_copia_seguridad(request):
-    try:
-        # Ruta base del proyecto
-        base_dir = settings.BASE_DIR
-        # Carpeta donde se guardará el backup
-        backups_dir = os.path.join(base_dir, "backups")
-        os.makedirs(backups_dir, exist_ok=True)
-
-        # Nombre del archivo de backup con fecha
-        fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_filename = f"backup_{fecha}.zip"
-        backup_path = os.path.join(backups_dir, backup_filename)
-
-        # Archivos o carpetas a incluir en el backup
-        incluir = ["db.sqlite3", "actas", "accounts", "core"]
-
-        shutil.make_archive(backup_path.replace(".zip", ""), "zip", base_dir)
-
-        return JsonResponse(
-            {"mensaje": f"Copia de seguridad creada: {backup_filename}"}
-        )
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-
-def generar_backup(request):
-    try:
-        # Ejecuta el comando personalizado
-        call_command("backup_db")
-
-        # Busca el archivo más reciente
-        backups_dir = os.path.join(settings.BASE_DIR, "backups")
-        files = sorted(
-            [
-                os.path.join(backups_dir, f)
-                for f in os.listdir(backups_dir)
-                if f.endswith(".zip")
-            ],
-            key=os.path.getmtime,
-            reverse=True,
-        )
-
-        if files:
-            latest_backup = files[0]
-            response = FileResponse(open(latest_backup, "rb"))
-            response["Content-Disposition"] = (
-                f'attachment; filename="{os.path.basename(latest_backup)}"'
-            )
-            return response
-        else:
-            return HttpResponse("No se encontró ningún backup.", status=404)
-
-    except Exception as e:
-        return HttpResponse(f"Error al generar el backup: {str(e)}", status=500)

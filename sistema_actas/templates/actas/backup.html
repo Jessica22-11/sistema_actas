@@ -1,9 +1,56 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
+
 {% block content %}
-<div style="text-align:center; margin-top:50px;">
-  <h2>Generar copia de seguridad del sistema</h2>
-  <form action="{% url 'generar_backup' %}" method="get">
-    <button type="submit" class="btn btn-success">💾 Generar Backup</button>
-  </form>
+<div class="container mt-4">
+    <h3 class="text-center mb-4">🗄 Copias de Seguridad del Sistema</h3>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="text-end mb-3">
+        <a href="{% url 'core:crear_copia_seguridad' %}" class="btn btn-success">
+            📦 Crear nueva copia de seguridad
+        </a>
+    </div>
+
+    {% if archivos %}
+        <table class="table table-hover shadow-sm rounded">
+            <thead class="table-success">
+                <tr>
+                    <th>Nombre del Archivo</th>
+                    <th>Tamaño</th>
+                    <th>Fecha de Creación</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for archivo in archivos %}
+                    <tr>
+                        <td>{{ archivo.nombre }}</td>
+                        <td>{{ archivo.tamaño }}</td>
+                        <td>{{ archivo.fecha }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'core:restaurar_backup' archivo.nombre %}" 
+                                class="btn btn-warning btn-sm"
+                                onclick="return confirm('¿Seguro que deseas restaurar este backup? Se sobrescribirán los datos actuales.')">
+                                🔄 Restaurar
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-info text-center">
+            No hay copias de seguridad disponibles.
+        </div>
+    {% endif %}
 </div>
-{% endblock %}
+{% endblock %}

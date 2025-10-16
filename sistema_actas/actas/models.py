@@ -133,7 +133,7 @@ class Firma(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     firmado = models.BooleanField(default=False)
     fecha_firma = models.DateTimeField(null=True, blank=True)
-    firma_imagen = models.ImageField(upload_to='firmas_actas/', null=True, blank=True)
+    firma_imagen = models.ImageField(upload_to='firmas/', null=True, blank=True)
     firmado_por_silencio = models.BooleanField(default=False)
     comentarios = models.TextField(blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)

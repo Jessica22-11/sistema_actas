@@ -28,7 +28,4 @@ urlpatterns = [
     # Rutas para aprendices
     path("aprendiz/pendientes/", views.aprendiz_pendientes, name="aprendiz_pendientes"),
     path("aprendiz/compromisos/", views.aprendiz_compromisos, name="aprendiz_compromisos"),
-    path("backup/", views.crear_copia_seguridad, name="crear_backup"),
-    # otras rutas...
-    path("generar-backup/", views.generar_backup, name="generar_backup"),
 ]

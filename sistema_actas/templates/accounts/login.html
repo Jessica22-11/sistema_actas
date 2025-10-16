@@ -19,14 +19,13 @@ html, body {
     padding: 0;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: linear-gradient(to top, #e9ecef, #ffffff);
     font-family: "Poppins", sans-serif;
     overflow-x: hidden !important; /* CRÍTICO: Elimina el scroll horizontal fantasma */
 }
 
 /* Contenedor principal */
 .login-wrapper {
-    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -44,17 +43,19 @@ html, body {
     /* ANCHO AUMENTADO Y CENTRADO: Se verá bien en PC y centrado */
     max-width: 550px; 
     width: 100%;
-    margin: 0 auto; 
+    margin: 0 auto;
+    padding:20px;
 }
 
 /* Tarjeta del formulario */
 .login-card {
-    width: 100%; /* Ocupa el 100% de los 550px de login-main */
+    width: 382px; /* Ocupa el 100% de los 550px de login-main */
     background: rgba(255, 255, 255, 0.98);
     border-radius: 18px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     overflow: hidden;
-    display: flex;
+    display: block;
+    margin: -25px auto;
     flex-direction: column;
 }
 

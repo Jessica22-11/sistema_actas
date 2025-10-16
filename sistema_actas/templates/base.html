@@ -35,10 +35,11 @@
             display: flex;
             flex-direction: column;
             overflow-x: visible !important; 
+            padding-bottom: 70px;
         }
 
         /* ===== NAVBAR ===== */
-        .navbar-sena {
+        .navbar-sena  {
             background: linear-gradient(135deg, var(--sena-green), var(--sena-dark-green));
             color: white;
             box-shadow: 0 2px 6px rgba(0,0,0,0.2);
@@ -145,20 +146,25 @@
 
         /* === FOOTER COMPACTO === */
         .footer {
+            position:fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
             border-top: 2px solid #3a9b00;
             background-color: #fff;
             text-align: center;
-            padding: 8px 0; /* antes era más alto, lo reducimos */
+            padding: 10px 0; /* antes era más alto, lo reducimos */
             font-size: 0.9rem;
             color: #333;
             margin-top: 1rem;
+            z-index: 1000;
         }
 
         .footer-content {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px; /* espacio reducido entre secciones */
+            height:61px;
         }
 
         .footer-text {
@@ -265,6 +271,11 @@
         .dark-mode .help-fixed-btn {
             background-color: #1a75ff !important;
         }
+        /* ===== AJUSTE PARA FUENTE DEL BOTÓN ===== */
+        .btn-custom-font {
+            font-family: 'Verdana', sans-serif !important; /* ✅ Se añade !important */
+            font-weight: 500 !important; /* ✅ Se añade !important */
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -285,7 +296,7 @@
             <div class="d-flex d-lg-none me-2"> <ul class="navbar-nav flex-row">
                     <li class="nav-item dropdown me-2">
                         <a class="nav-link position-relative" href="#" id="notificationDropdownMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-bell"></i>
+                            <i class="fas fa-bell">Notificacines</i>
                             {% if notifications_count > 0 %}
                                 <span class="notification-badge">{{ notifications_count }}</span>
                             {% endif %}
@@ -394,15 +405,14 @@
                     </li>
                 </ul>
                 {% else %}
-                    <div>
-                        <button type="button" 
+                    <button type="button" 
                             class="btn btn-outline-light btn-sm me-2" 
                             data-bs-toggle="modal"
                             data-bs-target="#infoModal"
-                            title="Información del Sistema">
-                            <i class="fas fa-info-circle"></i>
-                        </button>
-                    </div>
+                            title="Información del Sistema"
+                            style="font-family: Arial, sans-serif; font-weight: bold; text-transform: uppercase;">
+                        <i class="fas fa-info-circle"></i> Información del Sistema
+                    </button>
                 {% endif %}
             </div>
         </div>
@@ -429,6 +439,9 @@
                 </a>
                 <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
                     <i class="fas fa-signature"></i>Firmas Pendientes
+                </a>
+                <a class="nav-link" href="{% url 'core:vista_backup' %}">
+                    <i class="fas fa-database me-1"></i>Copia De Seguridad
                 </a>
                 <a class="nav-link" href="{% url 'actas:mis_compromisos' %}">
                     <i class="fas fa-tasks"></i>Compromisos
