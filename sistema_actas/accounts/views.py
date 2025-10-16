@@ -6,6 +6,8 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm, ProfileUpda
 from .models import User
 from django.contrib.auth import update_session_auth_hash
 from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 
 def login_view(request):
@@ -104,8 +106,59 @@ def settings_view(request):
 
 
 def usuarios(request):
-    lista_usuarios = User.objects.all()
-    return render(request, "accounts/usuarios.html", {"usuarios": lista_usuarios})
+    # Obtener parámetros de búsqueda y filtros
+    search = request.GET.get('search', '')
+    rol = request.GET.get('rol', '')
+    estado = request.GET.get('estado', '')
+    
+    # Filtrar usuarios
+    lista_usuarios = User.objects.all().order_by('-fecha_registro')
+    
+    # Aplicar búsqueda
+    if search:
+        lista_usuarios = lista_usuarios.filter(
+            Q(username__icontains=search) |
+            Q(email__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search)
+        )
+    
+    # Aplicar filtro por rol
+    if rol:
+        lista_usuarios = lista_usuarios.filter(rol=rol)
+    
+    # Aplicar filtro por estado
+    if estado == 'activo':
+        lista_usuarios = lista_usuarios.filter(is_active=True)
+    elif estado == 'inactivo':
+        lista_usuarios = lista_usuarios.filter(is_active=False)
+    
+    # Paginación
+    paginator = Paginator(lista_usuarios, 10)  # 10 usuarios por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Opciones para los filtros
+    roles = User.ROLES
+    
+    estados = [
+        ('activo', 'Activo'),
+        ('inactivo', 'Inactivo'),
+    ]
+    
+    context = {
+        'page_obj': page_obj,
+        'usuarios': page_obj,
+        'roles': roles,
+        'estados': estados,
+        'filtros': {
+            'search': search,
+            'rol': rol,
+            'estado': estado,
+        }
+    }
+    
+    return render(request, "accounts/usuarios.html", context)
 
 def editar_usuario(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
