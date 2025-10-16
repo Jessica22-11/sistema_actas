@@ -49,6 +49,13 @@
     .btn-add-user:hover {
         background-color: var(--sena-dark-green, #2d8000);
     }
+    
+    .badge-rol {
+        padding: 0.4em 0.8em;
+        border-radius: 0.5rem;
+        font-size: 0.85em;
+        font-weight: 500;
+    }
 </style>
 {% endblock %}
 
@@ -63,7 +70,77 @@
 
     <div class="card">
         <div class="card-body">
-            {% if usuarios %}
+            <!-- FILTROS Y BÚSQUEDA -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <form method="get" class="row g-3">
+                        <!-- Barra de búsqueda -->
+                        <div class="col-md-5">
+                            <label for="search" class="form-label">
+                                <i class="fas fa-search me-1"></i>Buscar
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="search" 
+                                   name="search" 
+                                   value="{{ filtros.search }}" 
+                                   placeholder="Buscar por nombre, usuario o email...">
+                        </div>
+                        
+                        <!-- Filtro por Rol -->
+                        <div class="col-md-3">
+                            <label for="rol" class="form-label">
+                                <i class="fas fa-user-tag me-1"></i>Rol
+                            </label>
+                            <select class="form-select" id="rol" name="rol">
+                                <option value="">Todos los roles</option>
+                                {% for rol_key, rol_value in roles %}
+                                    <option value="{{ rol_key }}" {% if filtros.rol == rol_key %}selected{% endif %}>
+                                        {{ rol_value }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Filtro por Estado -->
+                        <div class="col-md-2">
+                            <label for="estado" class="form-label">
+                                <i class="fas fa-toggle-on me-1"></i>Estado
+                            </label>
+                            <select class="form-select" id="estado" name="estado">
+                                <option value="">Todos</option>
+                                {% for estado_key, estado_value in estados %}
+                                    <option value="{{ estado_key }}" {% if filtros.estado == estado_key %}selected{% endif %}>
+                                        {{ estado_value }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="col-md-2 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary flex-fill">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+                            <a href="{% url 'accounts:usuarios' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-redo"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Contador de resultados -->
+            {% if page_obj %}
+            <div class="mb-3">
+                <small class="text-muted">
+                    Mostrando {{ page_obj.start_index }} - {{ page_obj.end_index }} de {{ page_obj.paginator.count }} usuarios
+                </small>
+            </div>
+            {% endif %}
+
+            <!-- TABLA DE USUARIOS -->
+            {% if page_obj %}
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
@@ -71,11 +148,13 @@
                                 <th scope="col">#</th>
                                 <th scope="col">Usuario</th>
                                 <th scope="col">Correo Electrónico</th>
+                                <th scope="col">Rol</th>
+                                <th scope="col">Estado</th>
                                 <th scope="col">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for u in usuarios %}
+                            {% for u in page_obj %}
                                 <tr>
                                     <td>{{ forloop.counter }}</td>
                                     <td>
@@ -83,16 +162,40 @@
                                             <div class="user-icon me-2">
                                                 {{ u.username|slice:":1"|upper }}
                                             </div>
-                                            <span>{{ u.username }}</span>
+                                            <div>
+                                                <strong>{{ u.username }}</strong>
+                                                {% if u.get_full_name %}
+                                                    <br><small class="text-muted">{{ u.get_full_name }}</small>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     </td>
                                     <td>{{ u.email }}</td>
                                     <td>
-                                        <a href="{% url 'accounts:editar_usuario' u.id %}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-edit"></i> Editar
+                                        <span class="badge badge-rol bg-info">
+                                            {{ u.get_rol_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if u.is_active %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Activo
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-times-circle me-1"></i>Inactivo
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'accounts:editar_usuario' u.id %}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                            <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{% url 'accounts:eliminar_usuario' u.id %}" class="btn btn-sm btn-outline-danger">
-                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                        <a href="{% url 'accounts:eliminar_usuario' u.id %}" 
+                                           class="btn btn-sm btn-outline-danger" 
+                                           title="Eliminar"
+                                           onclick="return confirm('¿Estás seguro de eliminar a {{ u.username }}?')">
+                                            <i class="fas fa-trash-alt"></i>
                                         </a>
                                     </td>
                                 </tr>
@@ -100,14 +203,50 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- PAGINACIÓN -->
+                <nav aria-label="Navegación de páginas">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if filtros.search %}&search={{ filtros.search }}{% endif %}{% if filtros.rol %}&rol={{ filtros.rol }}{% endif %}{% if filtros.estado %}&estado={{ filtros.estado }}{% endif %}">
+                                    &laquo; Primera
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filtros.search %}&search={{ filtros.search }}{% endif %}{% if filtros.rol %}&rol={{ filtros.rol }}{% endif %}{% if filtros.estado %}&estado={{ filtros.estado }}{% endif %}">
+                                    Anterior
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filtros.search %}&search={{ filtros.search }}{% endif %}{% if filtros.rol %}&rol={{ filtros.rol }}{% endif %}{% if filtros.estado %}&estado={{ filtros.estado }}{% endif %}">
+                                    Siguiente
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if filtros.search %}&search={{ filtros.search }}{% endif %}{% if filtros.rol %}&rol={{ filtros.rol }}{% endif %}{% if filtros.estado %}&estado={{ filtros.estado }}{% endif %}">
+                                    Última &raquo;
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
             {% else %}
                 <div class="alert alert-warning text-center mb-0">
                     <i class="fas fa-exclamation-circle me-2"></i>
-                    No hay usuarios registrados.
+                    No se encontraron usuarios con los filtros aplicados.
                 </div>
             {% endif %}
         </div>
     </div>
 </div>
 {% endblock %}
-
