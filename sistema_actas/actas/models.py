@@ -24,7 +24,9 @@ class Acta(models.Model):
         ('otra', 'Otra'),
     ]
     
-    # Campos básicos
+    # ========================================
+    # CAMPOS BÁSICOS (YA EXISTENTES)
+    # ========================================
     numero_acta = models.CharField(max_length=20, unique=True, editable=False)
     titulo = models.CharField(max_length=200)
     tipo_reunion = models.CharField(max_length=30, choices=TIPOS_REUNION)
@@ -56,6 +58,57 @@ class Acta(models.Model):
     # Archivos adjuntos
     archivo_adjunto = models.FileField(upload_to='actas/adjuntos/', blank=True, null=True)
     
+    # ========================================
+    # CAMPOS NUEVOS PARA OLLAMA/IA
+    # ========================================
+    # Indicador de si fue generada con IA
+    generada_con_ia = models.BooleanField(
+        default=False,
+        help_text='Indica si el acta fue generada usando Ollama',
+        db_index=True  # Índice para búsquedas rápidas
+    )
+    
+    # Prompt original enviado a Ollama
+    prompt_original = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Resumen breve que el usuario proporcionó para generar el acta'
+    )
+    
+    # Modelo de IA usado
+    modelo_ia_usado = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text='Ejemplo: llama3:8b, llama3:70b, etc.'
+    )
+    
+    # Tiempo que tomó generar (en segundos)
+    tiempo_generacion = models.FloatField(
+        blank=True,
+        null=True,
+        help_text='Tiempo en segundos que tomó Ollama en generar el acta'
+    )
+    
+    # Si fue editada después de generar
+    editada_despues_ia = models.BooleanField(
+        default=False,
+        help_text='Indica si el acta fue modificada manualmente después de ser generada por IA'
+    )
+    
+    # Fecha de la última edición manual (si aplica)
+    fecha_ultima_edicion_manual = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Última vez que se editó manualmente después de generar con IA'
+    )
+    
+    # Versión del acta (para tracking de cambios)
+    version = models.IntegerField(
+        default=1,
+        help_text='Número de versión del acta (incrementa con cada edición)'
+    )
+    
     class Meta:
         verbose_name = 'Acta'
         verbose_name_plural = 'Actas'
@@ -63,16 +116,39 @@ class Acta(models.Model):
         permissions = [
             ("can_finalize_acta", "Puede finalizar actas"),
             ("can_archive_acta", "Puede archivar actas"),
+            ("can_generate_with_ia", "Puede generar actas con IA"),  # NUEVO PERMISO
+        ]
+        
+        # ÍNDICES PARA OPTIMIZACIÓN
+        indexes = [
+            models.Index(fields=['fecha_creacion']),
+            models.Index(fields=['estado']),
+            models.Index(fields=['fecha_reunion']),
+            models.Index(fields=['generada_con_ia']),
+            models.Index(fields=['creador', 'fecha_creacion']),
         ]
     
     def save(self, *args, **kwargs):
+        # Generar número de acta si no existe
         if not self.numero_acta:
             year = timezone.now().year
             count = Acta.objects.filter(fecha_creacion__year=year).count() + 1
             self.numero_acta = f"ACT-{year}-{count:03d}"
         
+        # Establecer fecha límite de firmas
         if not self.fecha_limite_firmas and self.estado == 'en_revision':
             self.fecha_limite_firmas = timezone.now() + timedelta(days=self.aplicar_silencio_dias)
+        
+        # Detectar si fue editada después de generar con IA
+        if self.pk and self.generada_con_ia:
+            # Si el acta ya existe y fue generada con IA
+            acta_anterior = Acta.objects.get(pk=self.pk)
+            if (acta_anterior.desarrollo != self.desarrollo or 
+                acta_anterior.orden_dia != self.orden_dia):
+                # Si cambió el contenido, marcar como editada
+                self.editada_despues_ia = True
+                self.fecha_ultima_edicion_manual = timezone.now()
+                self.version += 1
         
         super().save(*args, **kwargs)
     
@@ -110,8 +186,26 @@ class Acta(models.Model):
                 firma.firmado_por_silencio = True
                 firma.save()
     
+    # NUEVO MÉTODO: Información sobre IA
+    def info_generacion_ia(self):
+        """
+        Retorna un diccionario con información sobre la generación con IA
+        """
+        if not self.generada_con_ia:
+            return None
+        
+        return {
+            'generada_con_ia': True,
+            'modelo_usado': self.modelo_ia_usado or 'Desconocido',
+            'tiempo_generacion': f"{self.tiempo_generacion:.1f}s" if self.tiempo_generacion else 'N/A',
+            'editada_manualmente': self.editada_despues_ia,
+            'version': self.version,
+            'fecha_ultima_edicion': self.fecha_ultima_edicion_manual
+        }
+    
     def __str__(self):
         return f"{self.numero_acta} - {self.titulo}"
+
 
 class Participante(models.Model):
     acta = models.ForeignKey(Acta, on_delete=models.CASCADE, related_name='participantes')
@@ -124,9 +218,14 @@ class Participante(models.Model):
         verbose_name = 'Participante'
         verbose_name_plural = 'Participantes'
         unique_together = ['acta', 'usuario']
+        # NUEVO: Índice para búsquedas frecuentes
+        indexes = [
+            models.Index(fields=['acta', 'usuario']),
+        ]
     
     def __str__(self):
         return f"{self.usuario.get_full_name()} - {self.acta.numero_acta}"
+
 
 class Firma(models.Model):
     acta = models.ForeignKey(Acta, on_delete=models.CASCADE, related_name='firmas')
@@ -142,6 +241,11 @@ class Firma(models.Model):
         verbose_name = 'Firma'
         verbose_name_plural = 'Firmas'
         unique_together = ['acta', 'usuario']
+        # NUEVO: Índices para optimización
+        indexes = [
+            models.Index(fields=['acta', 'firmado']),
+            models.Index(fields=['usuario', 'firmado']),
+        ]
     
     def firmar(self, request=None):
         self.firmado = True
@@ -163,6 +267,7 @@ class Firma(models.Model):
     def __str__(self):
         return f"Firma de {self.usuario.get_full_name()} - {self.acta.numero_acta}"
 
+
 class Compromiso(models.Model):
     ESTADOS = [
         ('pendiente', 'Pendiente'),
@@ -179,12 +284,22 @@ class Compromiso(models.Model):
     porcentaje_avance = models.IntegerField(default=0)
     observaciones = models.TextField(blank=True)
     fecha_completado = models.DateTimeField(null=True, blank=True)
-    reporte_cumplimiento = models.TextField(blank=True, verbose_name="Reporte/Justificación del Responsable", help_text="Descripción del avance o justificación del estado/cumplimiento.")
+    reporte_cumplimiento = models.TextField(
+        blank=True, 
+        verbose_name="Reporte/Justificación del Responsable", 
+        help_text="Descripción del avance o justificación del estado/cumplimiento."
+    )
     
     class Meta:
         verbose_name = 'Compromiso'
         verbose_name_plural = 'Compromisos'
         ordering = ['fecha_limite']
+        # NUEVO: Índices para optimización
+        indexes = [
+            models.Index(fields=['fecha_limite', 'estado']),
+            models.Index(fields=['responsable', 'estado']),
+            models.Index(fields=['acta']),
+        ]
     
     def save(self, *args, **kwargs):
         # Asegurar que fecha_limite sea un objeto date
@@ -217,12 +332,19 @@ class Compromiso(models.Model):
     
     def __str__(self):
         return f"Compromiso {self.id} - {self.acta.numero_acta}"
-    
+
+
 class ComentarioActa(models.Model):
     acta = models.ForeignKey('Acta', on_delete=models.CASCADE, related_name='comentarios')
     autor = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     texto = models.TextField()
     fecha = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        # NUEVO: Índice para optimización
+        indexes = [
+            models.Index(fields=['acta', 'fecha']),
+        ]
     
     def __str__(self):
         return f"Comentario de {self.autor.get_full_name()} en {self.acta.numero_acta}"

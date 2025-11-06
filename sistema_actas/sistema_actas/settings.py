@@ -317,3 +317,16 @@ PASSWORD_RESET_COMPLETE_URL = "/accounts/login/"
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-responder@sena.edu.co")
 
 SITE_DOMAIN = config("SITE_DOMAIN", default="127.0.0.1:8000")
+
+# ========================================
+# CONFIGURACIÓN GROQ 
+# ========================================
+GROQ_API_KEY = config("GROQ_API_KEY", default="")
+GROQ_MODEL = config("GROQ_MODEL", default="llama3-70b-8192")
+GROQ_TIMEOUT = config("GROQ_TIMEOUT", default=30, cast=int)
+
+# Habilitar IA
+IA_ENABLED = config("IA_ENABLED", default=True, cast=bool)
+
+# Límites opcionales
+IA_DAILY_LIMIT_PER_USER = config("IA_DAILY_LIMIT_PER_USER", default=50, cast=int)

@@ -1,5 +1,4 @@
 import os
-import shutil
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
@@ -21,7 +20,6 @@ from django.http import FileResponse
 from reportlab.platypus import Image
 from reportlab.lib.units import inch
 
-
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
 from core.utils import generar_acta_con_ia, enviar_notificacion_participantes
 from notifications.models import Notification
@@ -29,7 +27,6 @@ from accounts.models import User
 from .forms import ReporteCompromisoForm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-
 
 # Create your views here.
 @login_required
@@ -195,8 +192,6 @@ def editar_acta(request, acta_id):
     }
     return render(request, "actas/editar.html", context)
 
-
-
 @login_required
 @require_POST
 def firmar_acta(request, acta_id):
@@ -271,7 +266,6 @@ def firmar_acta(request, acta_id):
     except Exception as e:
         return JsonResponse({"success": False, "message": f"Error al firmar: {str(e)}"}, status=500)
 
-
 @login_required
 @require_POST
 def enviar_revision(request, acta_id):
@@ -297,28 +291,26 @@ def enviar_revision(request, acta_id):
 
     participantes_notificados = 0
     for participante in acta.participantes.all():
-    # Crear o recuperar firma
+        # Crear o recuperar firma
         firma, created = Firma.objects.get_or_create(
-        acta=acta,
-        usuario=participante.usuario,
-        defaults={"firmado": False}
-    )
-    
-    # Crear notificación para que le aparezca al participante
-    Notification.objects.create(
-        usuario=participante.usuario,
-        tipo="firma_pendiente",
-        titulo="📝 Nueva acta pendiente de firma",
-        mensaje=f"Tienes pendiente firmar el acta '{acta.numero_acta} - {acta.titulo}'. Fecha límite: {acta.fecha_limite_firmas.strftime('%d/%m/%Y')}",
-        enlace=f"/actas/{acta.id}/",
-    )
-    participantes_notificados += 1
-    print(f"✅ Notificación enviada a: {participante.usuario.email}")  # Para debu
+            acta=acta,
+            usuario=participante.usuario,
+            defaults={"firmado": False}
+        )
+
+        # Crear notificación para que le aparezca al participante
+        Notification.objects.create(
+            usuario=participante.usuario,
+            tipo="firma_pendiente",
+            titulo="📝 Nueva acta pendiente de firma",
+            mensaje=f"Tienes pendiente firmar el acta '{acta.numero_acta} - {acta.titulo}'. Fecha límite: {acta.fecha_limite_firmas.strftime('%d/%m/%Y')}",
+            enlace=f"/actas/{acta.id}/",
+        )
+        participantes_notificados += 1
+        print(f"✅ Notificación enviada a: {participante.usuario.email}")  # Para debug
 
     messages.success(request, f"Acta enviada a revisión. {participantes_notificados} participantes han sido notificados.")
     return redirect("actas:detalle", acta_id=acta_id)
-
-
 
 @login_required
 @require_POST
@@ -338,8 +330,39 @@ def procesar_con_ia(request):
             {"success": False, "message": f"Error al procesar con IA: {str(e)}"}
         )
 
+def obtener_firma_imagen(firma, usuario):
+    """
+    Intenta obtener la imagen de firma con múltiples fallbacks.
+    Retorna un objeto Image de ReportLab o None.
+    """
+    from reportlab.platypus import Image
+    
+    # 1. Intentar desde Firma.firma_imagen
+    if firma and firma.firma_imagen:
+        try:
+            ruta = firma.firma_imagen.path
+            if os.path.exists(ruta):
+                return Image(ruta, width=1.5*inch, height=0.6*inch)
+        except Exception as e:
+            print(f"Error cargando firma desde Firma.firma_imagen: {e}")
+    
+    # 2. Intentar desde User.firma_digital
+    if usuario.firma_digital:
+        try:
+            ruta = usuario.firma_digital.path
+            if os.path.exists(ruta):
+                return Image(ruta, width=1.5*inch, height=0.6*inch)
+        except Exception as e:
+            print(f"Error cargando firma desde User.firma_digital: {e}")
+    
+    # 3. Si todo falla, retornar None
+    return None
+
 @login_required
 def generar_pdf(request, acta_id):
+    """
+    Genera PDF con formato oficial SENA GOR-F-084 V02
+    """
     acta = get_object_or_404(Acta, id=acta_id)
 
     # Verificar permisos
@@ -349,233 +372,317 @@ def generar_pdf(request, acta_id):
         or request.user.is_staff
     ):
         messages.error(request, "No tienes permiso para descargar esta acta.")
-        return redirect("actas:list")
+        return redirect("actas:actas_list")
 
     # Crear PDF
     response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = (
-        f'attachment; filename="acta_{acta.numero_acta}.pdf"'
-    )
+    response["Content-Disposition"] = f'attachment; filename="ACTA_{acta.numero_acta}.pdf"'
 
-    doc = SimpleDocTemplate(response, pagesize=letter)
+    # Configurar documento
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=letter,
+        rightMargin=0.5*inch,
+        leftMargin=0.5*inch,
+        topMargin=0.5*inch,
+        bottomMargin=0.5*inch
+    )
+    
     styles = getSampleStyleSheet()
     story = []
 
-    # Estilo personalizado para el encabezado
-    title_style = ParagraphStyle(
-        "CustomTitle",
-        parent=styles["Title"],
-        fontSize=16,
-        spaceAfter=20,
-        alignment=1,  # Centrado
+    # ==========================================
+    # ENCABEZADO CON LOGO SENA
+    # ==========================================
+    # Intentar cargar logo (ajusta la ruta según tu proyecto)
+    try:
+        logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo-sena.png')
+        if os.path.exists(logo_path):
+            logo = Image(logo_path, width=1*inch, height=1*inch)
+            story.append(logo)
+    except:
+        pass  # Si no hay logo, continuar sin él
+
+    story.append(Spacer(1, 10))
+
+    # ==========================================
+    # TABLA PRINCIPAL: ACTA No.
+    # ==========================================
+    acta_header = Table(
+        [[Paragraph(f"<b>ACTA No. {acta.numero_acta}</b>", styles['Title'])]],
+        colWidths=[7*inch]
     )
+    acta_header.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+    ]))
+    story.append(acta_header)
 
-    body_style = styles["Normal"]
-    body_style.wordWrap = "CJK"  # Permite el ajuste de línea en palabras largas
+    # ==========================================
+    # NOMBRE DEL COMITÉ
+    # ==========================================
+    comite_table = Table(
+        [
+            [Paragraph("<b>NOMBRE DEL COMITÉ O DE LA REUNIÓN:</b>", styles['Normal'])],
+            [Paragraph(acta.titulo, styles['Normal'])]
+        ],
+        colWidths=[7*inch]
+    )
+    comite_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(comite_table)
 
-    # Encabezado
-    story.append(Paragraph("SERVICIO NACIONAL DE APRENDIZAJE - SENA", title_style))
-    story.append(Paragraph("CENTRO MINERO", title_style))
-    story.append(Paragraph(f"ACTA DE REUNIÓN - {acta.numero_acta}", title_style))
-    story.append(Spacer(1, 20))
+    # ==========================================
+    # FILA: CIUDAD/FECHA y HORA INICIO/FIN
+    # ==========================================
+    fecha_str = acta.fecha_reunion.strftime("%d/%m/%Y")
+    hora_inicio = acta.fecha_reunion.strftime("%H:%M")
+    hora_fin = (acta.fecha_reunion + timedelta(hours=2)).strftime("%H:%M")  # Estimado
 
-    # Información general
-    info_data = [
-        ["Título:", Paragraph(acta.titulo, body_style)],
-        ["Tipo de Reunión:", acta.get_tipo_reunion_display()],
-        ["Fecha y Hora:", acta.fecha_reunion.strftime("%d/%m/%Y %H:%M")],
-        ["Lugar:", Paragraph(acta.lugar_reunion, body_style)],
-        ["Modalidad:", acta.get_modalidad_display()],
-        ["Estado:", acta.get_estado_display()],
+    info_table = Table(
+        [
+            [
+                Paragraph("<b>CIUDAD Y FECHA:</b>", styles['Normal']),
+                Paragraph(f"{acta.lugar_reunion}, {fecha_str}", styles['Normal']),
+                Paragraph("<b>HORA INICIO:</b>", styles['Normal']),
+                Paragraph(hora_inicio, styles['Normal']),
+                Paragraph("<b>HORA FIN:</b>", styles['Normal']),
+                Paragraph(hora_fin, styles['Normal']),
+            ]
+        ],
+        colWidths=[1.3*inch, 1.7*inch, 1*inch, 0.7*inch, 0.8*inch, 0.7*inch]
+    )
+    info_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(info_table)
+
+    # ==========================================
+    # FILA: LUGAR/ENLACE y DIRECCIÓN/REGIONAL
+    # ==========================================
+    lugar_table = Table(
+        [
+            [
+                Paragraph("<b>LUGAR Y/O ENLACE:</b>", styles['Normal']),
+                Paragraph(acta.lugar_reunion, styles['Normal']),
+                Paragraph("<b>DIRECCIÓN / REGIONAL / CENTRO:</b>", styles['Normal']),
+                Paragraph("Centro Minero SENA", styles['Normal']),
+            ]
+        ],
+        colWidths=[1.5*inch, 2*inch, 2*inch, 1.5*inch]
+    )
+    lugar_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(lugar_table)
+
+    # ==========================================
+    # AGENDA O PUNTOS PARA DESARROLLAR
+    # ==========================================
+    agenda_content = acta.orden_dia if acta.orden_dia else "No especificada"
+    agenda_table = Table(
+        [
+            [Paragraph("<b>AGENDA O PUNTOS PARA DESARROLLAR:</b>", styles['Normal'])],
+            [Paragraph(agenda_content.replace('\n', '<br/>'), styles['Normal'])]
+        ],
+        colWidths=[7*inch]
+    )
+    agenda_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(agenda_table)
+
+    # ==========================================
+    # OBJETIVO(S) DE LA REUNIÓN
+    # ==========================================
+    objetivo = f"Reunión de tipo {acta.get_tipo_reunion_display()}"
+    if acta.generada_con_ia:
+        objetivo += " (Generada con IA)"
+    
+    objetivo_table = Table(
+        [
+            [Paragraph("<b>OBJETIVO(S) DE LA REUNIÓN:</b>", styles['Normal'])],
+            [Paragraph(objetivo, styles['Normal'])]
+        ],
+        colWidths=[7*inch]
+    )
+    objetivo_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(objetivo_table)
+
+    # ==========================================
+    # DESARROLLO DE LA REUNIÓN
+    # ==========================================
+    desarrollo_content = acta.desarrollo if acta.desarrollo else "No especificado"
+    desarrollo_table = Table(
+        [
+            [Paragraph("<b>DESARROLLO DE LA REUNIÓN</b>", styles['Normal'])],
+            [Paragraph(desarrollo_content.replace('\n', '<br/>'), styles['Normal'])]
+        ],
+        colWidths=[7*inch]
+    )
+    desarrollo_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(desarrollo_table)
+
+    # ==========================================
+    # CONCLUSIONES
+    # ==========================================
+    conclusiones = acta.observaciones if acta.observaciones else "Sin observaciones adicionales"
+    conclusiones_table = Table(
+        [
+            [Paragraph("<b>CONCLUSIONES</b>", styles['Normal'])],
+            [Paragraph(conclusiones.replace('\n', '<br/>'), styles['Normal'])]
+        ],
+        colWidths=[7*inch]
+    )
+    conclusiones_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(conclusiones_table)
+
+    # ==========================================
+    # COMPROMISOS
+    # ==========================================
+    compromisos_data = [
+        [
+            Paragraph("<b>ACTIVIDAD/DECISIÓN</b>", styles['Normal']),
+            Paragraph("<b>FECHA</b>", styles['Normal']),
+            Paragraph("<b>RESPONSABLE</b>", styles['Normal']),
+            Paragraph("<b>FIRMA</b>", styles['Normal']),
+        ]
     ]
 
-    info_table = Table(info_data, colWidths=[1.5 * inch, 4.5 * inch])
-    info_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
-                ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-                ("FONTNAME", (1, 0), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 0), (-1, -1), 10),
-                # --- CORRECCIÓN AQUÍ ---
-                # Se agregó el grosor de línea (1) que faltaba en el comando GRID.
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
-            ]
-        )
-    )
-    story.append(info_table)
-    story.append(Spacer(1, 20))
-
-    # Participantes
-    story.append(Paragraph("PARTICIPANTES", styles["Heading2"]))
-    participantes_data = [["Nombre", "Email", "Rol", "Firmado"]]
-
-    for participante in acta.participantes.select_related("usuario").all():
-        firma = acta.firmas.filter(usuario=participante.usuario).first()
-        firmado = "Sí" if firma and firma.firmado else "No"
-        participantes_data.append(
-            [
-                participante.usuario.get_full_name(),
-                participante.usuario.email,
-                participante.rol_en_reunion or "-",
-                firmado,  # Se corrigió para que muestre el valor de la variable
-            ]
-        )
-
-    participantes_table = Table(
-        participantes_data, colWidths=[2 * inch, 2 * inch, 1.5 * inch, 0.7 * inch]
-    )
-    participantes_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-                ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ]
-        )
-    )
-
-    story.append(participantes_table)
-    story.append(Spacer(1, 20))
-
-    # Orden del día
-    if acta.orden_dia:
-        story.append(Paragraph("ORDEN DEL DÍA", styles["Heading2"]))
-        story.append(Paragraph(acta.orden_dia.replace("\n", "<br/>"), body_style))
-        story.append(Spacer(1, 15))
-
-    # Desarrollo
-    if acta.desarrollo:
-        story.append(Paragraph("DESARROLLO DE LA REUNIÓN", styles["Heading2"]))
-        story.append(Paragraph(acta.desarrollo.replace("\n", "<br/>"), body_style))
-        story.append(Spacer(1, 15))
-
-    # Compromisos
     if acta.compromisos.exists():
-        story.append(Paragraph("COMPROMISOS", styles["Heading2"]))
-        compromisos_data = [["Descripción", "Responsable", "Fecha Límite", "Estado"]]
-
-        for compromiso in acta.compromisos.select_related("responsable").all():
-            # Mejora: Usar Paragraph para que el texto largo se ajuste automáticamente
-            descripcion_paragraph = Paragraph(compromiso.descripcion, body_style)
-
-            compromisos_data.append(
-                [
-                    descripcion_paragraph,
-                    compromiso.responsable.get_full_name(),
-                    compromiso.fecha_limite.strftime("%d/%m/%Y"),
-                    compromiso.get_estado_display(),
-                ]
-            )
-
-        compromisos_table = Table(
-            compromisos_data, colWidths=[2.5 * inch, 1.5 * inch, 1 * inch, 1 * inch]
-        )
-        compromisos_table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-                    ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
-                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ]
-            )
-        )
-        story.append(compromisos_table)
-        story.append(Spacer(1, 20))
-
-    # --- CORRECCIÓN DE INDENTACIÓN ---
-    # Los siguientes bloques (Observaciones, Firmas, Pie de página y la construcción del PDF)
-    # se han movido fuera del bloque `if acta.compromisos.exists():`.
-    # Esto asegura que el PDF se genere siempre, incluso si no hay compromisos.
-
-    # Observaciones
-    if acta.observaciones:
-        story.append(Paragraph("OBSERVACIONES", styles["Heading2"]))
-        story.append(Paragraph(acta.observaciones.replace("\n", "<br/>"), body_style))
-        story.append(Spacer(1, 15))
-
-    # Firmas
-    story.append(Paragraph("FIRMAS", styles["Heading2"]))
-    if acta.silencio_administrativo:
-        story.append(
-            Paragraph(
-                "* Algunas firmas fueron aplicadas por silencio administrativo.",
-                styles["Italic"],
-            )
-        )
-    story.append(Spacer(1, 20))  # Espacio antes de mostrar las firmas
-
-    # Tabla de firmas con imágenes
-    from reportlab.platypus import Image
-
-    firmas_data = []
-    for firma in acta.firmas.select_related("usuario").all():
-        usuario = firma.usuario.get_full_name() or firma.usuario.username
-        texto_firma = Paragraph(usuario, styles["Normal"])
-
-        if firma.firmado and firma.firma_imagen:
-            try:
-                img = Image(firma.firma_imagen.path, width=2.5 * inch, height=1 * inch)
-                firmas_data.append([img, texto_firma])
-            except Exception as e:
-                print(f"Error al cargar firma de {usuario}: {e}")
-                firmas_data.append([Paragraph("(No se pudo cargar la firma)", styles["Normal"]), texto_firma])
-        else:
-            firmas_data.append([Paragraph("(Pendiente de firma)", styles["Normal"]), texto_firma])
-
-    if firmas_data:
-        firmas_table = Table(firmas_data, colWidths=[3 * inch, 3 * inch])
-        firmas_table.setStyle(
-            TableStyle(
-                [
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("BOX", (0, 0), (-1, -1), 0.5, colors.gray),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.lightgrey),
-                ]
-            )
-        )
-        story.append(firmas_table)
+        for comp in acta.compromisos.all():
+            compromisos_data.append([
+                Paragraph(comp.descripcion, styles['Normal']),
+                Paragraph(comp.fecha_limite.strftime("%d/%m/%Y"), styles['Normal']),
+                Paragraph(comp.responsable.get_full_name(), styles['Normal']),
+                Paragraph("", styles['Normal']),  # Espacio para firma
+            ])
     else:
-        story.append(Paragraph("No se registraron firmas para esta acta.", styles["Normal"]))
+        compromisos_data.append([
+            Paragraph("No se registraron compromisos", styles['Normal']),
+            "", "", ""
+        ])
 
-    story.append(Spacer(1, 40))  # Espacio extra después de las firmas
+    compromisos_table = Table(compromisos_data, colWidths=[2.5*inch, 1.2*inch, 1.8*inch, 1.5*inch])
+    compromisos_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+    ]))
+    story.append(compromisos_table)
 
+    # ==========================================
+    # ASISTENTES Y APROBACIÓN
+    # ==========================================
+    story.append(Spacer(1, 10))
 
-    # Pie de pagina
-    footer_style = styles["Normal"]
-    footer_style.alignment = 1  # Centrado
-    story.append(
-        Paragraph(
-            f"Documento generado el {timezone.now().strftime('%d/%m/%Y %H:%M')}",
-            footer_style,
-        )
+    asistentes_data = [
+        [
+            Paragraph("<b>NOMBRE</b>", styles['Normal']),
+            Paragraph("<b>DEPENDENCIA/EMPRESA</b>", styles['Normal']),
+            Paragraph("<b>APRUEBA (SI/NO)</b>", styles['Normal']),
+            Paragraph("<b>FIRMA O PARTICIPACIÓN VIRTUAL</b>", styles['Normal']),
+        ]
+    ]
+
+    # Agregar participantes con sus firmas
+    for participante in acta.participantes.select_related('usuario').all():
+        firma_obj = acta.firmas.filter(usuario=participante.usuario).first()
+
+        # Preparar celda de firma con múltiples fallbacks
+        if firma_obj and firma_obj.firmado:
+            # Intentar obtener imagen de firma
+            firma_imagen = obtener_firma_imagen(firma_obj, participante.usuario)
+
+            if firma_imagen:
+                # ✅ Se encontró la imagen de firma
+                firma_cell = firma_imagen
+            else:
+                # ⚠️ Firmado pero sin imagen
+                firma_cell = Paragraph(
+                    "✓ Firmado<br/><font size=6>({fecha})</font>".format(
+                        fecha=firma_obj.fecha_firma.strftime("%d/%m/%Y %H:%M") if firma_obj.fecha_firma else "N/A"
+                    ),
+                    styles['Normal']
+                )
+        else:
+            # ❌ No firmado
+            firma_cell = Paragraph(
+                "<font color='red'>Pendiente</font>",
+                styles['Normal']
+            )
+
+        asistentes_data.append([
+            Paragraph(participante.usuario.get_full_name(), styles['Normal']),
+            Paragraph(participante.rol_en_reunion or "Participante", styles['Normal']),
+            Paragraph("SÍ" if firma_obj and firma_obj.firmado else "NO", styles['Normal']),
+            firma_cell
+        ])
+
+    asistentes_table = Table(asistentes_data, colWidths=[1.8*inch, 1.8*inch, 1.2*inch, 2.2*inch])
+    asistentes_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+    ]))
+    story.append(asistentes_table)
+
+    # ==========================================
+    # NOTA LEGAL
+    # ==========================================
+    story.append(Spacer(1, 10))
+    nota_legal = Paragraph(
+        "<font size=7>De acuerdo con La Ley 1581 de 2012, Protección de Datos Personales, el Servicio Nacional de Aprendizaje SENA, "
+        "se compromete a garantizar la seguridad y protección de los datos personales que se encuentran almacenados en este "
+        "documento, y les dará el tratamiento correspondiente en cumplimiento de lo establecido legalmente.</font>",
+        styles['Normal']
     )
-    story.append(Paragraph("Centro Minero - SENA", footer_style))
+    story.append(nota_legal)
 
+    # ==========================================
+    # PIE DE PÁGINA
+    # ==========================================
+    story.append(Spacer(1, 20))
+    footer = Paragraph(
+        "<font size=8><b>GOR-F-084 V02</b></font>",
+        styles['Normal']
+    )
+    story.append(footer)
+
+    # Construir PDF
     try:
         doc.build(story)
     except Exception as e:
-        # Es una buena práctica registrar el error si algo más falla
-        print(f"Error al construir el PDF: {e}")
-        messages.error(request, "Ocurrió un error inesperado al generar el PDF.")
-        return redirect("actas:list")
+        print(f"Error al construir PDF: {e}")
+        messages.error(request, "Error al generar el PDF.")
+        return redirect("actas:detalle", acta_id=acta.id)
 
     return response
-
 
 @login_required
 def actas_list(request):
@@ -627,15 +734,9 @@ def actas_list(request):
 
     return render(request, 'actas/actas_list.html', context)
 
-
 @login_required
 def crear_acta(request):
-    
-    if request.user.rol == 'aprendiz':
-        messages.error(request, "No tienes permisos para crear actas.")
-        return redirect("actas:actas_list")
-    
-    
+
     if request.user.rol == 'aprendiz':
         messages.error(request, "No tienes permisos para crear actas.")
         return redirect("actas:actas_list")
@@ -782,11 +883,7 @@ def eliminar_acta(request, acta_id):
 @login_required
 def finalizar_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
-    
-    if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
-        messages.error(request, "No tienes permisos para finalizar actas.")
-        return redirect("actas:detalle", acta_id=acta.id)
-    
+
     if request.user.rol not in ['instructor', 'funcionario', 'coordinador', 'director', 'admin']:
         messages.error(request, "No tienes permisos para finalizar actas.")
         return redirect("actas:detalle", acta_id=acta.id)
@@ -927,7 +1024,6 @@ def eliminar_compromiso(request, compromiso_id):
 def mis_compromisos(request):
     compromisos = Compromiso.objects.filter(responsable=request.user).order_by('-fecha_limite')
     return render(request, "actas/mis_compromisos.html", {"compromisos": compromisos})
-
 
 @login_required
 @require_POST

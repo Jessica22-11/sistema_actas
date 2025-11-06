@@ -1,71 +1,85 @@
-from openai import OpenAI
 from django.conf import settings
 from django.core.mail import send_mail
+from actas.services.ia_service import GroqService
 import json
+import logging
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+logger = logging.getLogger(__name__)
+
 
 def extract_json_from_string(text):
-    """Limpia el texto de la IA buscando el objeto JSON entre {}."""
+    """
+    Limpia el texto de la IA buscando el objeto JSON entre {}.
+    """
     try:
+        # Limpiar markdown code blocks si existen
+        text = text.replace('```json', '').replace('```', '').strip()
+        
         # Busca el inicio de la primera llave de apertura y la última de cierre
         start_index = text.find('{')
         end_index = text.rfind('}')
         
         if start_index == -1 or end_index == -1:
             raise ValueError("No se encontró el inicio o fin de un objeto JSON.")
-            
+        
         json_string = text[start_index : end_index + 1]
         return json.loads(json_string)
+        
     except Exception as e:
-        # Si la limpieza falla, elevamos un error de formato
-        raise ValueError(f"Error al limpiar y parsear JSON. Respuesta: {text[:100]}...")
+        raise ValueError(f"Error al limpiar y parsear JSON: {e}")
 
 
 def generar_acta_con_ia(resumen, usuario):
+    """
+    Genera contenido de acta usando Groq (reemplaza OpenAI).
+    """
     try:
-        # --- FUNCIÓN DE PYTHON CON EL PROMPT MODIFICADO ---
-        prompt_content = f"""
-        Eres un asistente experto en redacción de actas institucionales del SENA.
-        A partir del siguiente resumen, genera la Orden del Día y el Desarrollo (resumen de la discusión y conclusiones) del acta.
-
-        DEBES RESPONDER EXCLUSIVAMENTE CON UN OBJETO JSON VÁLIDO. NUNCA USES TEXTO EXPLICATIVO FUERA DEL JSON.
-        El JSON debe contener DOS claves: "orden_dia" (string, puntos de la agenda en formato numerado) y "desarrollo" (string, resumen detallado de la reunión y conclusiones).
-
-        Ejemplo de formato de salida JSON:
-        {{"orden_dia": "1. Verificación del Quórum\\n2. Revisión de desempeño ADSO...", "desarrollo": "Se analizó el informe del instructor y se concluyó..."}}
-
-        Resumen de la reunión: {resumen}
-        """
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "Tu única respuesta debe ser el objeto JSON."},
-                {"role": "user", "content": prompt_content},
-            ],
-            temperature=0.7,
-            max_tokens=1500,
-        )
-
-        contenido_json_str = response.choices[0].message.content.strip()
+        # Crear instancia del servicio Groq
+        servicio_groq = GroqService()
         
-        # Usamos la función de limpieza y parsing
-        data_ia = extract_json_from_string(contenido_json_str)
+        # Verificar conexión
+        if not servicio_groq.verificar_conexion():
+            raise Exception("No se pudo conectar con el servicio de IA (Groq)")
+        
+        # Prompt optimizado
+        prompt_content = f"""Responde ÚNICAMENTE con un objeto JSON válido. No agregues texto adicional.
 
-        # Devolvemos el diccionario estructurado que el JavaScript espera
+El JSON debe tener exactamente estas dos claves:
+- "orden_dia": string con puntos numerados (ejemplo: "1. Tema uno\\n2. Tema dos")
+- "desarrollo": string con el resumen detallado
+
+Ejemplo:
+{{"orden_dia": "1. Verificación de asistencia\\n2. Revisión de temas\\n3. Asignación de tareas", "desarrollo": "Se llevó a cabo la reunión donde se discutieron los siguientes puntos..."}}
+
+Resumen de la reunión:
+{resumen}
+
+Responde SOLO con el JSON:"""
+
+        # ⚡ GENERAR CON MODELO CORRECTO
+        contenido_json_str = servicio_groq.generar_texto(
+            prompt=prompt_content,
+            modelo="llama-3.1-8b-instant"  # ✅ Modelo que SÍ funciona
+        )
+        
+        # Limpiar y parsear la respuesta JSON
+        data_ia = extract_json_from_string(contenido_json_str)
+        
+        # Validar claves
+        if "orden_dia" not in data_ia or "desarrollo" not in data_ia:
+            raise ValueError(f"JSON no contiene las claves esperadas: {data_ia.keys()}")
+        
+        # Devolver resultado
         return {
-            "orden_dia": data_ia.get("orden_dia", "Error: Contenido IA no generado."),
-            "desarrollo": data_ia.get("desarrollo", "Error: Contenido IA no generado."),
+            "orden_dia": data_ia.get("orden_dia", "No generado"),
+            "desarrollo": data_ia.get("desarrollo", "No generado"),
         }
 
     except ValueError as e:
-        # Captura errores de formato de JSON
         raise ValueError(f"Error de formato JSON: {e}")
     
     except Exception as e:
-        # Captura otros errores (API Key, conexión)
-        raise Exception(f"Fallo en la llamada a la API de IA: {e}")
+        raise Exception(f"Error al generar con IA: {e}")
 
 
 def enviar_notificacion_participantes(participantes, asunto, mensaje):
