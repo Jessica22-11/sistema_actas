@@ -41,11 +41,7 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-producti
 # Modo de depuarcion, True en desarrollo,False en produccion
 DEBUG = config("DEBUG", default=True, cast=bool)
 # Lista de hosts permitidos para acceder al proyecto
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1",
-    cast=lambda v: [s.strip() for s in v.split((","))],
-)
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -334,3 +330,9 @@ IA_ENABLED = config("IA_ENABLED", default=True, cast=bool)
 
 # Límites opcionales
 IA_DAILY_LIMIT_PER_USER = config("IA_DAILY_LIMIT_PER_USER", default=50, cast=int)
+
+# ==============================================
+# CORS Configuration (para app móvil)
+# ==============================================
+CORS_ALLOW_ALL_ORIGINS = True  # Solo para desarrollo
+CORS_ALLOW_CREDENTIALS = True

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import api_views 
 
 app_name = "actas"
 
@@ -28,4 +29,20 @@ urlpatterns = [
     # Rutas para aprendices
     path("aprendiz/pendientes/", views.aprendiz_pendientes, name="aprendiz_pendientes"),
     path("aprendiz/compromisos/", views.aprendiz_compromisos, name="aprendiz_compromisos"),
+    
+    # ============================================
+    # API para app móvil (AGREGAR AL FINAL)
+    # ============================================
+    path('api/auth/login/', api_views.login_api, name='api_login'),
+    path('api/dashboard/', api_views.dashboard_api, name='api_dashboard'),
+    path('api/actas/', api_views.actas_list_api, name='api_actas_list'),
+    path('api/actas/<int:acta_id>/', api_views.acta_detalle_api, name='api_acta_detalle'),
+    path("api/perfil/", api_views.perfil_api, name="api_perfil"), 
+    path('api/cambiar-password/', api_views.cambiar_password_api, name='api_cambiar_password'),
+    path('api/usuarios/', api_views.usuarios_list_api, name='api_usuarios_list'),
+    path('api/actas/crear/', api_views.crear_acta_api, name='api_crear_acta'),
+    path('api/actas/generar-ia/', api_views.generar_acta_ia_api, name='api_generar_ia'),
+    path('api/firmas/pendientes/', api_views.actas_pendientes_firma_api, name='api_firmas_pendientes'),
+    path('api/firmas/firmar/', api_views.firmar_acta_api, name='api_firmar_acta'), 
+    path('api/actas/<int:acta_id>/cambiar-estado/', api_views.cambiar_estado_acta_api, name='api_cambiar_estado'), 
 ]
