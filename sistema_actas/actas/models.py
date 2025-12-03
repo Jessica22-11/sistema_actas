@@ -137,7 +137,7 @@ class Acta(models.Model):
         
         # Establecer fecha límite de firmas
         if not self.fecha_limite_firmas and self.estado == 'en_revision':
-            self.fecha_limite_firmas = timezone.now() + timedelta(days=self.aplicar_silencio_dias)
+            self.fecha_limite_firmas = timezone.now() + timedelta(minutes=2)  # 2 minutos para pruebas
         
         # Detectar si fue editada después de generar con IA
         if self.pk and self.generada_con_ia:

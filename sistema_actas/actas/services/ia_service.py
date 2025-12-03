@@ -50,7 +50,7 @@ class GroqService:
     # -------------------------------------------------------------------------
     # 2. Generar texto con Groq (modelo LLaMA)
     # -------------------------------------------------------------------------
-    def generar_texto(self, prompt: str, modelo: str = "llama-3.1-8b-instant"):
+    def generar_texto(self, prompt: str, modelo: str = "llama-3.1-8b-instant", max_tokens: int = 1000, temperature: float = 0.7):
         """Envía un prompt al modelo de Groq y devuelve el texto generado."""
         try:
             if not self.api_key:
@@ -67,7 +67,8 @@ class GroqService:
                     {"role": "system", "content": "Eres un asistente útil y conciso."},
                     {"role": "user", "content": prompt}
                 ],
-                "temperature": 0.7
+                "temperature": temperature,
+                "max_tokens": max_tokens
             }
 
             url = f"{self.base_url}/chat/completions"
@@ -76,7 +77,7 @@ class GroqService:
             if response.status_code == 200:
                 content = response.json()
                 texto = content["choices"][0]["message"]["content"]
-                logger.info("🧠 Respuesta generada correctamente.")
+                logger.info(f"🧠 Respuesta generada correctamente. Tokens: {max_tokens}")
                 return texto.strip()
             else:
                 logger.warning(f"⚠️ Error ({response.status_code}): {response.text}")

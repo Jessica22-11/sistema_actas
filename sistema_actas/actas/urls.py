@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import api_views 
 
+
 app_name = "actas"
 
 urlpatterns = [
@@ -45,4 +46,11 @@ urlpatterns = [
     path('api/firmas/pendientes/', api_views.actas_pendientes_firma_api, name='api_firmas_pendientes'),
     path('api/firmas/firmar/', api_views.firmar_acta_api, name='api_firmar_acta'), 
     path('api/actas/<int:acta_id>/cambiar-estado/', api_views.cambiar_estado_acta_api, name='api_cambiar_estado'), 
+    path('api/compromisos/crear/', api_views.crear_compromiso_api, name='api_crear_compromiso'),
+    path('api/actas/<int:acta_id>/editar/', api_views.editar_acta_api, name='api_editar_acta'),
+    path('api/actas/<int:acta_id>/pdf/', api_views.generar_pdf_api, name='api_generar_pdf'),
+    path('api/compromisos/mis-compromisos/', api_views.mis_compromisos_api, name='api_mis_compromisos'),
+    path('api/compromisos/<int:compromiso_id>/actualizar/', api_views.actualizar_compromiso_api, name='api_actualizar_compromiso'),
+    path('api/actas/<int:acta_id>/aplicar-silencio/', api_views.aplicar_silencio_administrativo_api, name='api_aplicar_silencio'),
+    path('api/auth/register/', api_views.register_api, name='api_register'),
 ]

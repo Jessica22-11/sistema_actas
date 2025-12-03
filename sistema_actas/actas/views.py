@@ -494,7 +494,8 @@ def generar_pdf(request, acta_id):
             [Paragraph("<b>AGENDA O PUNTOS PARA DESARROLLAR:</b>", styles['Normal'])],
             [Paragraph(agenda_content.replace('\n', '<br/>'), styles['Normal'])]
         ],
-        colWidths=[7*inch]
+        colWidths=[7*inch],
+        splitByRow=1
     )
     agenda_table.setStyle(TableStyle([
         ('BOX', (0, 0), (-1, -1), 1, colors.black),
@@ -533,7 +534,8 @@ def generar_pdf(request, acta_id):
             [Paragraph("<b>DESARROLLO DE LA REUNIÓN</b>", styles['Normal'])],
             [Paragraph(desarrollo_content.replace('\n', '<br/>'), styles['Normal'])]
         ],
-        colWidths=[7*inch]
+        colWidths=[7*inch],
+        splitByRow=1
     )
     desarrollo_table.setStyle(TableStyle([
         ('BOX', (0, 0), (-1, -1), 1, colors.black),
@@ -551,7 +553,8 @@ def generar_pdf(request, acta_id):
             [Paragraph("<b>CONCLUSIONES</b>", styles['Normal'])],
             [Paragraph(conclusiones.replace('\n', '<br/>'), styles['Normal'])]
         ],
-        colWidths=[7*inch]
+        colWidths=[7*inch],
+        splitByRow=1
     )
     conclusiones_table.setStyle(TableStyle([
         ('BOX', (0, 0), (-1, -1), 1, colors.black),
