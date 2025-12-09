@@ -7,6 +7,9 @@ from django.conf import settings
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
 import json
 import logging
+import os
+
+
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -2258,4 +2261,341 @@ def register_api(request):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        }, status=500)
+
+@csrf_exempt
+def actualizar_firma_api(request):
+    """
+    API para actualizar firma digital del usuario
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    # Verificar autenticación
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado'
+        }, status=401)
+    
+    token = auth_header.split(' ')[1]
+    
+    try:
+        token_obj = Token.objects.get(key=token)
+        user = token_obj.user
+    except Token.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+    
+    # Verificar que se envió una imagen
+    if 'firma_digital' not in request.FILES:
+        return JsonResponse({
+            'success': False,
+            'error': 'No se envió ninguna imagen'
+        }, status=400)
+    
+    firma = request.FILES['firma_digital']
+    
+    # Validar tamaño (máximo 2 MB)
+    if firma.size > 2 * 1024 * 1024:
+        return JsonResponse({
+            'success': False,
+            'error': 'La imagen no debe superar los 2 MB'
+        }, status=400)
+    
+    # Validar formato
+    extensiones_permitidas = ['.png', '.jpg', '.jpeg']
+    extension = os.path.splitext(firma.name)[1].lower()
+    if extension not in extensiones_permitidas:
+        return JsonResponse({
+            'success': False,
+            'error': 'Solo se permiten imágenes PNG, JPG o JPEG'
+        }, status=400)
+    
+    try:
+        # Eliminar firma anterior si existe
+        if user.firma_digital:
+            if os.path.isfile(user.firma_digital.path):
+                os.remove(user.firma_digital.path)
+        
+        # Guardar nueva firma
+        user.firma_digital = firma
+        user.save()
+        
+        # URL completa de la firma
+        firma_url = request.build_absolute_uri(user.firma_digital.url) if user.firma_digital else None
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Firma digital actualizada correctamente',
+            'data': {
+                'firma_digital': firma_url,
+                'tiene_firma': True,
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al guardar firma: {str(e)}'
+        }, status=500)
+        
+@csrf_exempt
+def solicitar_codigo_recuperacion_api(request):
+    """
+    API para solicitar código de recuperación de contraseña
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').lower().strip()
+        
+        if not email:
+            return JsonResponse({
+                'success': False,
+                'error': 'Email es requerido'
+            }, status=400)
+        
+        # Buscar usuario
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Por seguridad, no revelar si el email existe o no
+            return JsonResponse({
+                'success': True,
+                'message': 'Si el correo existe, recibirás un código de recuperación'
+            })
+        
+        # Generar código de 6 dígitos
+        import random
+        code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        
+        # Crear registro de código (expira en 15 minutos)
+        from datetime import timedelta
+        from accounts.models import PasswordResetCode
+        
+        reset_code = PasswordResetCode.objects.create(
+            user=user,
+            code=code,
+            expires_at=timezone.now() + timedelta(minutes=15)
+        )
+        
+        # Enviar email
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        subject = 'Código de Recuperación - Sistema Actas SENA'
+        message = f"""
+Hola {user.get_full_name()},
+
+Has solicitado recuperar tu contraseña en el Sistema de Gestión de Actas SENA.
+
+Tu código de recuperación es:
+
+    {code}
+
+Este código expira en 15 minutos.
+
+Si no solicitaste este código, ignora este mensaje.
+
+---
+Sistema de Gestión de Actas
+SENA Centro Minero
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Código de recuperación enviado al correo'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos inválidos'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al enviar código: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def verificar_codigo_recuperacion_api(request):
+    """
+    API para verificar código de recuperación
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').lower().strip()
+        code = data.get('code', '').strip()
+        
+        if not email or not code:
+            return JsonResponse({
+                'success': False,
+                'error': 'Email y código son requeridos'
+            }, status=400)
+        
+        # Buscar usuario
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Código inválido o expirado'
+            }, status=400)
+        
+        # Buscar código válido
+        from accounts.models import PasswordResetCode
+        
+        try:
+            reset_code = PasswordResetCode.objects.filter(
+                user=user,
+                code=code,
+                used=False
+            ).latest('created_at')
+            
+            if not reset_code.is_valid():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Código expirado. Solicita uno nuevo.'
+                }, status=400)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Código verificado correctamente'
+            })
+            
+        except PasswordResetCode.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Código inválido o expirado'
+            }, status=400)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos inválidos'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al verificar código: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def resetear_password_api(request):
+    """
+    API para establecer nueva contraseña con código de recuperación
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').lower().strip()
+        code = data.get('code', '').strip()
+        new_password = data.get('new_password', '')
+        
+        if not email or not code or not new_password:
+            return JsonResponse({
+                'success': False,
+                'error': 'Email, código y nueva contraseña son requeridos'
+            }, status=400)
+        
+        # Validar contraseña
+        if len(new_password) < 8:
+            return JsonResponse({
+                'success': False,
+                'error': 'La contraseña debe tener al menos 8 caracteres'
+            }, status=400)
+        
+        # Buscar usuario
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Código inválido o expirado'
+            }, status=400)
+        
+        # Buscar código válido
+        from accounts.models import PasswordResetCode
+        
+        try:
+            reset_code = PasswordResetCode.objects.filter(
+                user=user,
+                code=code,
+                used=False
+            ).latest('created_at')
+            
+            if not reset_code.is_valid():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Código expirado. Solicita uno nuevo.'
+                }, status=400)
+            
+            # Cambiar contraseña
+            user.set_password(new_password)
+            user.save()
+            
+            # Marcar código como usado
+            reset_code.used = True
+            reset_code.save()
+            
+            # Invalidar todos los otros códigos del usuario
+            PasswordResetCode.objects.filter(
+                user=user,
+                used=False
+            ).exclude(id=reset_code.id).update(used=True)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Contraseña actualizada correctamente'
+            })
+            
+        except PasswordResetCode.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Código inválido o expirado'
+            }, status=400)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos inválidos'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al resetear contraseña: {str(e)}'
         }, status=500)

@@ -53,4 +53,8 @@ urlpatterns = [
     path('api/compromisos/<int:compromiso_id>/actualizar/', api_views.actualizar_compromiso_api, name='api_actualizar_compromiso'),
     path('api/actas/<int:acta_id>/aplicar-silencio/', api_views.aplicar_silencio_administrativo_api, name='api_aplicar_silencio'),
     path('api/auth/register/', api_views.register_api, name='api_register'),
+    path('api/perfil/actualizar-firma/', api_views.actualizar_firma_api, name='api_actualizar_firma'),
+    path('api/auth/solicitar-codigo/', api_views.solicitar_codigo_recuperacion_api, name='api_solicitar_codigo'),
+    path('api/auth/verificar-codigo/', api_views.verificar_codigo_recuperacion_api, name='api_verificar_codigo'),
+    path('api/auth/resetear-password/', api_views.resetear_password_api, name='api_resetear_password'),
 ]

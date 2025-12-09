@@ -93,3 +93,24 @@ class User (AbstractUser) :
     #Representacion en texto del usuario
     def __str__(self):
         return f"{self.get_full_name()} ({self.email})"
+    
+class PasswordResetCode(models.Model):
+    """
+    Modelo para almacenar códigos de recuperación de contraseña
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_codes')
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def is_valid(self):
+        """Verifica si el código aún es válido"""
+        from django.utils import timezone
+        return not self.used and timezone.now() < self.expires_at
+    
+    def __str__(self):
+        return f"Código {self.code} para {self.user.email}"

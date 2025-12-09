@@ -194,18 +194,6 @@ CKEDITOR_CONFIGS = {
     },
 }
 
-# Configuración de Correo (Cargando solo las variables del entorno)
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"  # Valor fijo
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com") # Se lee del .env o usa default
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", 'True').lower() in ('true', '1', 't')
-EMAIL_USE_SSL = False # Valor fijo
-
-# Credenciales de Autenticación
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER") # Debe ser cargado del .env
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD") # Debe ser cargado del .env
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@tudominio.com")
-
 # Celery + Redis (tareas asincronas)
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://172.25.59.213:6379/0")
 CELERY_RESULT_BACKEND = config(
@@ -336,3 +324,12 @@ IA_DAILY_LIMIT_PER_USER = config("IA_DAILY_LIMIT_PER_USER", default=50, cast=int
 # ==============================================
 CORS_ALLOW_ALL_ORIGINS = True  # Solo para desarrollo
 CORS_ALLOW_CREDENTIALS = True
+
+# Configuración de Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'gestionactassena@gmail.com'
+EMAIL_HOST_PASSWORD = 'vhvnbtdfgmpawsde'  # Sin espacios
+DEFAULT_FROM_EMAIL = 'Sistema Actas SENA <getsionactassena@gmail.com>'
