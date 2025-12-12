@@ -4,11 +4,14 @@ from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.conf import settings
+from rest_framework.authtoken.models import Token
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
 import json
 import logging
 import os
-
+import zipfile
+import tempfile
+from django.http import FileResponse
 
 
 User = get_user_model()
@@ -2599,3 +2602,506 @@ def resetear_password_api(request):
             'success': False,
             'error': f'Error al resetear contraseña: {str(e)}'
         }, status=500)
+        
+@csrf_exempt
+def firmas_pendientes_api(request):
+    """
+    API para obtener lista completa de actas pendientes de firma
+    """
+    if request.method != 'GET':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    # Verificar autenticación (sistema personalizado)
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado'
+        }, status=401)
+    
+    token = auth_header.split(' ')[1]
+    
+    # Sistema de token personalizado: token_{id}
+    if not token.startswith('token_'):
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+    
+    try:
+        user_id = int(token.replace('token_', ''))
+        user = User.objects.get(id=user_id)
+    except (ValueError, User.DoesNotExist):
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+
+    try:
+        # Obtener firmas pendientes del usuario
+        firmas_pendientes = Firma.objects.filter(
+            usuario=user,
+            firmado=False,
+            acta__estado='en_revision'
+        ).select_related('acta', 'acta__creador').order_by('-acta__fecha_creacion')
+        
+        # Construir respuesta con información completa
+        firmas_data = []
+        for firma in firmas_pendientes:
+            acta = firma.acta
+            
+            # Calcular estadísticas de firmas del acta
+            total_firmas = acta.participantes.count()
+            firmas_completadas = acta.firmas.filter(firmado=True).count()
+            porcentaje_firmado = round((firmas_completadas / total_firmas * 100), 1) if total_firmas > 0 else 0
+            
+            firmas_data.append({
+                'firma_id': firma.id,  # ← Cambiado de 'id' a 'firma_id'
+                'acta': {
+                    'id': acta.id,
+                    'numero_acta': acta.numero_acta,
+                    'titulo': acta.titulo,
+                    'fecha_reunion': acta.fecha_reunion.isoformat(),
+                    'lugar_reunion': acta.lugar_reunion,
+                    'tipo_reunion': acta.tipo_reunion,  # ← Agregado
+                    'modalidad': acta.modalidad,  # ← Agregado
+                    'estado': acta.estado,
+                    'orden_dia': acta.orden_dia or '',  # ← Agregado
+                    'desarrollo': acta.desarrollo or '',  # ← Agregado
+                    'observaciones': acta.observaciones or '',  # ← Agregado
+                    'creador': {
+                        'id': acta.creador.id,
+                        'nombre_completo': acta.creador.get_full_name(),
+                        'username': acta.creador.username,  # ← Agregado
+                        'email': acta.creador.email,
+                    }
+                },
+                'firmas_completadas': f"{firmas_completadas}/{total_firmas}",
+                'porcentaje_firmado': int(porcentaje_firmado),  # ← Convertir a int
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': firmas_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al cargar firmas pendientes: {str(e)}'
+        }, status=500)
+    
+@csrf_exempt
+def exportar_datos_usuario_api(request):
+    """
+    API para exportar todos los datos del usuario actual
+    Genera un archivo ZIP con:
+    - Perfil del usuario (JSON)
+    - Actas creadas por el usuario (JSON)
+    - Compromisos asignados (JSON)
+    - Firmas realizadas (JSON)
+    """
+    if request.method != 'GET':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    # Autenticación
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado'
+        }, status=401)
+    
+    token = auth_header.split(' ')[1]
+    
+    if not token.startswith('token_'):
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+    
+    try:
+        user_id = int(token.replace('token_', ''))
+        user = User.objects.get(id=user_id)
+    except (ValueError, User.DoesNotExist):
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+    
+    try:
+        import zipfile
+        import tempfile
+        from django.http import FileResponse
+        
+        # Crear archivo temporal
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+        
+        with zipfile.ZipFile(temp_file.name, 'w') as backup_zip:
+            # 1. Perfil del usuario
+            perfil_data = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'rol': user.rol,
+                'telefono': user.telefono,
+                'fecha_exportacion': timezone.now().isoformat(),
+            }
+            backup_zip.writestr('perfil.json', json.dumps(perfil_data, indent=2, ensure_ascii=False))
+            
+            # 2. Actas creadas por el usuario
+            actas = Acta.objects.filter(creador=user)
+            actas_data = []
+            for acta in actas:
+                actas_data.append({
+                    'id': acta.id,
+                    'numero_acta': acta.numero_acta,
+                    'titulo': acta.titulo,
+                    'fecha_reunion': acta.fecha_reunion.isoformat(),
+                    'lugar_reunion': acta.lugar_reunion,
+                    'tipo_reunion': acta.tipo_reunion,
+                    'modalidad': acta.modalidad,
+                    'orden_dia': acta.orden_dia,
+                    'desarrollo': acta.desarrollo,
+                    'observaciones': acta.observaciones,
+                    'estado': acta.estado,
+                    'fecha_creacion': acta.fecha_creacion.isoformat(),
+                })
+            backup_zip.writestr('actas.json', json.dumps(actas_data, indent=2, ensure_ascii=False))
+            
+            # 3. Compromisos donde es responsable
+            compromisos = Compromiso.objects.filter(responsable=user)
+            compromisos_data = []
+            for compromiso in compromisos:
+                compromisos_data.append({
+                    'id': compromiso.id,
+                    'descripcion': compromiso.descripcion,
+                    'fecha_limite': compromiso.fecha_limite.isoformat(),
+                    'estado': compromiso.estado,
+                    'porcentaje_avance': compromiso.porcentaje_avance,
+                    'acta_numero': compromiso.acta.numero_acta,
+                    'fecha_completado': compromiso.fecha_completado.isoformat() if compromiso.fecha_completado else None,
+                    'observaciones': compromiso.observaciones,
+                })
+            backup_zip.writestr('compromisos.json', json.dumps(compromisos_data, indent=2, ensure_ascii=False))
+            
+            # 4. Firmas realizadas
+            firmas = Firma.objects.filter(usuario=user, firmado=True)
+            firmas_data = []
+            for firma in firmas:
+                firmas_data.append({
+                    'acta_numero': firma.acta.numero_acta,
+                    'acta_titulo': firma.acta.titulo,
+                    'fecha_firma': firma.fecha_firma.isoformat() if firma.fecha_firma else None,
+                })
+            backup_zip.writestr('firmas.json', json.dumps(firmas_data, indent=2, ensure_ascii=False))
+            
+            # 5. README con información
+            readme = f"""
+EXPORTACIÓN DE DATOS PERSONALES
+Sistema de Gestión de Actas SENA
+
+Usuario: {user.get_full_name()}
+Email: {user.email}
+Fecha de exportación: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Contenido:
+- perfil.json: Información de tu perfil
+- actas.json: {actas.count()} acta(s) creada(s) por ti
+- compromisos.json: {compromisos.count()} compromiso(s) asignado(s)
+- firmas.json: {firmas.count()} firma(s) realizada(s)
+
+Para importar estos datos:
+1. Ve a tu perfil en la aplicación
+2. Click en "Importar mis datos"
+3. Selecciona este archivo ZIP
+
+Nota: Solo puedes importar tus propios datos.
+            """
+            backup_zip.writestr('README.txt', readme)
+        
+        # Leer el contenido del archivo
+        temp_file.close()
+        with open(temp_file.name, 'rb') as f:
+            file_content = f.read()
+
+        # Eliminar archivo temporal
+        try:
+            os.unlink(temp_file.name)
+        except:
+            pass
+
+        # Nombre del archivo
+        filename = f'backup_{user.username}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.zip'
+
+        # Crear respuesta HTTP con el contenido
+        from django.http import HttpResponse
+        response = HttpResponse(file_content, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Length'] = len(file_content)
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+
+        return response
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al exportar datos: {str(e)}'
+        }, status=500)
+
+@csrf_exempt
+def importar_datos_usuario_api(request):
+    """
+    API para importar datos del usuario desde un archivo ZIP
+    Valida que solo se importen datos del mismo usuario
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    # Autenticación
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado'
+        }, status=401)
+    
+    token = auth_header.split(' ')[1]
+    
+    if not token.startswith('token_'):
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+    
+    try:
+        user_id = int(token.replace('token_', ''))
+        user = User.objects.get(id=user_id)
+    except (ValueError, User.DoesNotExist):
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+    
+    try:
+        import zipfile
+        import tempfile
+        
+        # Obtener archivo del request
+        if 'backup_file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se proporcionó ningún archivo'
+            }, status=400)
+        
+        backup_file = request.FILES['backup_file']
+        
+        # Validar extensión
+        if not backup_file.name.endswith('.zip'):
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo debe ser un ZIP'
+            }, status=400)
+        
+        # Validar tamaño (máximo 10 MB)
+        if backup_file.size > 10 * 1024 * 1024:
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo es demasiado grande (máximo 10 MB)'
+            }, status=400)
+        
+        # Guardar temporalmente
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+        for chunk in backup_file.chunks():
+            temp_file.write(chunk)
+        temp_file.close()
+        
+        # Leer contenido del ZIP
+        with zipfile.ZipFile(temp_file.name, 'r') as backup_zip:
+            # Verificar archivos esperados
+            expected_files = ['perfil.json', 'actas.json', 'compromisos.json', 'firmas.json']
+            zip_files = backup_zip.namelist()
+            
+            for expected in expected_files:
+                if expected not in zip_files:
+                    os.unlink(temp_file.name)
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Archivo ZIP inválido: falta {expected}'
+                    }, status=400)
+            
+            # Leer perfil
+            perfil_content = backup_zip.read('perfil.json')
+            perfil_data = json.loads(perfil_content)
+            
+            # Validar que el backup es del mismo usuario
+            if perfil_data['email'] != user.email:
+                os.unlink(temp_file.name)
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Este backup pertenece a otro usuario. Solo puedes importar tus propios datos.'
+                }, status=403)
+            
+            # Leer actas
+            actas_content = backup_zip.read('actas.json')
+            actas_data = json.loads(actas_content)
+            
+            # Leer compromisos
+            compromisos_content = backup_zip.read('compromisos.json')
+            compromisos_data = json.loads(compromisos_content)
+        
+        # Eliminar archivo temporal
+        os.unlink(temp_file.name)
+        
+        # Estadísticas de importación
+        stats = {
+            'actas_en_backup': len(actas_data),
+            'compromisos_en_backup': len(compromisos_data),
+            'actas_actuales': Acta.objects.filter(creador=user).count(),
+            'compromisos_actuales': Compromiso.objects.filter(responsable=user).count(),
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Backup validado correctamente',
+            'stats': stats,
+            'advertencia': 'IMPORTANTE: La importación sobrescribirá tus datos actuales. ¿Deseas continuar?'
+        })
+        
+    except zipfile.BadZipFile:
+        return JsonResponse({
+            'success': False,
+            'error': 'Archivo ZIP corrupto o inválido'
+        }, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos JSON inválidos en el backup'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al importar datos: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def confirmar_importacion_datos_api(request):
+    """
+    API para confirmar y ejecutar la importación de datos
+    Este endpoint ejecuta la restauración real de los datos
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    # Autenticación
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado'
+        }, status=401)
+    
+    token = auth_header.split(' ')[1]
+    
+    if not token.startswith('token_'):
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+    
+    try:
+        user_id = int(token.replace('token_', ''))
+        user = User.objects.get(id=user_id)
+    except (ValueError, User.DoesNotExist):
+        return JsonResponse({
+            'success': False,
+            'error': 'Token inválido'
+        }, status=401)
+    
+    try:
+        import zipfile
+        import tempfile
+        from django.db import transaction
+        
+        # Obtener archivo del request
+        if 'backup_file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se proporcionó ningún archivo'
+            }, status=400)
+        
+        backup_file = request.FILES['backup_file']
+        
+        # Guardar temporalmente
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+        for chunk in backup_file.chunks():
+            temp_file.write(chunk)
+        temp_file.close()
+        
+        # Ejecutar importación en una transacción
+        with transaction.atomic():
+            with zipfile.ZipFile(temp_file.name, 'r') as backup_zip:
+                # Leer datos
+                actas_content = backup_zip.read('actas.json')
+                actas_data = json.loads(actas_content)
+                
+                compromisos_content = backup_zip.read('compromisos.json')
+                compromisos_data = json.loads(compromisos_content)
+                
+                # Eliminar actas actuales del usuario
+                Acta.objects.filter(creador=user).delete()
+                
+                # Restaurar actas
+                actas_restauradas = 0
+                for acta_data in actas_data:
+                    try:
+                        Acta.objects.create(
+                            creador=user,
+                            numero_acta=acta_data['numero_acta'],
+                            titulo=acta_data['titulo'],
+                            fecha_reunion=datetime.fromisoformat(acta_data['fecha_reunion']),
+                            lugar_reunion=acta_data['lugar_reunion'],
+                            tipo_reunion=acta_data['tipo_reunion'],
+                            modalidad=acta_data['modalidad'],
+                            orden_dia=acta_data['orden_dia'],
+                            desarrollo=acta_data['desarrollo'],
+                            observaciones=acta_data['observaciones'],
+                            estado=acta_data['estado'],
+                        )
+                        actas_restauradas += 1
+                    except Exception as e:
+                        # Si falla una acta, continuar con las demás
+                        continue
+        
+        # Eliminar archivo temporal
+        os.unlink(temp_file.name)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Datos importados correctamente',
+            'stats': {
+                'actas_restauradas': actas_restauradas,
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al importar datos: {str(e)}'
+        }, status=500)
+

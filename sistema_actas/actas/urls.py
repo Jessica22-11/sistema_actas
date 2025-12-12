@@ -43,7 +43,6 @@ urlpatterns = [
     path('api/usuarios/', api_views.usuarios_list_api, name='api_usuarios_list'),
     path('api/actas/crear/', api_views.crear_acta_api, name='api_crear_acta'),
     path('api/actas/generar-ia/', api_views.generar_acta_ia_api, name='api_generar_ia'),
-    path('api/firmas/pendientes/', api_views.actas_pendientes_firma_api, name='api_firmas_pendientes'),
     path('api/firmas/firmar/', api_views.firmar_acta_api, name='api_firmar_acta'), 
     path('api/actas/<int:acta_id>/cambiar-estado/', api_views.cambiar_estado_acta_api, name='api_cambiar_estado'), 
     path('api/compromisos/crear/', api_views.crear_compromiso_api, name='api_crear_compromiso'),
@@ -57,4 +56,8 @@ urlpatterns = [
     path('api/auth/solicitar-codigo/', api_views.solicitar_codigo_recuperacion_api, name='api_solicitar_codigo'),
     path('api/auth/verificar-codigo/', api_views.verificar_codigo_recuperacion_api, name='api_verificar_codigo'),
     path('api/auth/resetear-password/', api_views.resetear_password_api, name='api_resetear_password'),
+    path('api/firmas/pendientes/', api_views.firmas_pendientes_api, name='api_firmas_pendientes'),
+    path('api/perfil/exportar-datos/', api_views.exportar_datos_usuario_api, name='api_exportar_datos'),
+    path('api/perfil/importar-datos/', api_views.importar_datos_usuario_api, name='api_importar_datos'),
+    path('api/perfil/confirmar-importacion/', api_views.confirmar_importacion_datos_api, name='api_confirmar_importacion')
 ]

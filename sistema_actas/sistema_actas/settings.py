@@ -81,8 +81,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",  # Protección contra Clickjacking
-    "sistema_actas.security.SecurityMiddleware",
-    "sistema_actas.security.AuditLogMiddleware",
+    #"sistema_actas.security.SecurityMiddleware",
+    #"sistema_actas.security.AuditLogMiddleware",
 ]
 
 ROOT_URLCONF = "sistema_actas.urls"
@@ -324,6 +324,22 @@ IA_DAILY_LIMIT_PER_USER = config("IA_DAILY_LIMIT_PER_USER", default=50, cast=int
 # ==============================================
 CORS_ALLOW_ALL_ORIGINS = True  # Solo para desarrollo
 CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = [
+    'Content-Disposition',
+    'Content-Type',
+    'Content-Length',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Configuración de Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -333,3 +349,18 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'gestionactassena@gmail.com'
 EMAIL_HOST_PASSWORD = 'vhvnbtdfgmpawsde'  # Sin espacios
 DEFAULT_FROM_EMAIL = 'Sistema Actas SENA <getsionactassena@gmail.com>'
+
+# Logging detallado para debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',  # Solo warnings y errores
+    },
+}
