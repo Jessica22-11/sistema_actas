@@ -27,18 +27,63 @@ def handle_error(e, custom_message="Error procesando la solicitud"):
     return custom_message
 
 
+def get_user_from_token(request):
+    """
+    Helper para autenticar al usuario usando el token del header Authorization.
+
+    Retorna:
+        - (user, None) si el token es válido
+        - (None, JsonResponse) si el token es inválido o falta
+
+    Uso:
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+        # Continuar con user autenticado
+    """
+    auth_header = request.headers.get('Authorization', '')
+
+    if not auth_header.startswith('Bearer '):
+        return None, JsonResponse({
+            'success': False,
+            'error': 'No autenticado. Header Authorization requerido.'
+        }, status=401)
+
+    token_key = auth_header.replace('Bearer ', '').strip()
+
+    if not token_key:
+        return None, JsonResponse({
+            'success': False,
+            'error': 'Token vacío'
+        }, status=401)
+
+    try:
+        token = Token.objects.select_related('user').get(key=token_key)
+        return token.user, None
+    except Token.DoesNotExist:
+        return None, JsonResponse({
+            'success': False,
+            'error': 'Token inválido o expirado'
+        }, status=401)
+
+
 @csrf_exempt
 def login_api(request):
     """
     API de login para la app móvil Flutter.
-    
+
     Recibe:
         - username (email del usuario)
         - password
-    
+
     Retorna:
-        - token (por ahora simple, luego JWT)
-        - user (datos del usuario)
+        - token: Token aleatorio seguro de 40 caracteres
+        - user: Datos del usuario autenticado
+
+    Seguridad:
+        - Genera un token criptográfico único por usuario
+        - El token se almacena en la base de datos
+        - Si el usuario ya tiene un token, se retorna el existente
     """
     if request.method == 'POST':
         try:
@@ -46,15 +91,24 @@ def login_api(request):
             data = json.loads(request.body)
             username = data.get('username')
             password = data.get('password')
-            
+
+            if not username or not password:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Usuario y contraseña son requeridos'
+                }, status=400)
+
             # Autenticar usuario
             user = authenticate(request, username=username, password=password)
-            
+
             if user is not None:
+                # Obtener o crear token para el usuario
+                token, created = Token.objects.get_or_create(user=user)
+
                 # Login exitoso
                 return JsonResponse({
                     'success': True,
-                    'token': f'token_{user.id}',  # TODO: Implementar JWT real después
+                    'token': token.key,  # Token seguro de 40 caracteres
                     'user': {
                         'id': user.id,
                         'username': user.username,
@@ -84,7 +138,46 @@ def login_api(request):
         'success': False,
         'error': 'Método no permitido'
     }, status=405)
-    
+
+
+@csrf_exempt
+def logout_api(request):
+    """
+    API de logout para la app móvil Flutter.
+
+    Elimina el token del usuario de la base de datos, invalidando la sesión.
+
+    Header requerido:
+        Authorization: Bearer <token>
+
+    Retorna:
+        - success: True si el logout fue exitoso
+    """
+    if request.method == 'POST':
+        try:
+            user, error_response = get_user_from_token(request)
+            if error_response:
+                return error_response
+
+            # Eliminar el token del usuario
+            Token.objects.filter(user=user).delete()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Sesión cerrada exitosamente'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': handle_error(e, "Error durante el logout")
+            }, status=500)
+
+    return JsonResponse({
+        'success': False,
+        'error': 'Método no permitido'
+    }, status=405)
+
 
 # ============================================
 #  API de Dashboard
@@ -93,26 +186,23 @@ def login_api(request):
 def dashboard_api(request):
     """
     API para obtener estadísticas del dashboard
+
+    Header requerido:
+        Authorization: Bearer <token>
+
+    Retorna estadísticas del usuario autenticado.
     """
     if request.method != 'GET':
         return JsonResponse({
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        # Por ahora, extraer user_id del token simple
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
+        # Autenticar usuario con token seguro
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
         
         # Estadísticas
         total_actas = Acta.objects.filter(creador=user).count()

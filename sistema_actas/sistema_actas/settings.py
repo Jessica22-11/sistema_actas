@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "ckeditor",  # Editor de texto enriquecido
     "ckeditor_uploader",  # Subida de archivos en CKEditor
     "rest_framework",  # API con Django REST Framework
+    "rest_framework.authtoken",  # Sistema de tokens para autenticación API
     "corsheaders",  # Manejo de CORS
     "import_export",  # Importación/exportación de datos en admin
     # Apps Propias
