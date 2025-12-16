@@ -3195,3 +3195,333 @@ def confirmar_importacion_datos_api(request):
             'error': f'Error al importar datos: {str(e)}'
         }, status=500)
 
+# ============================================
+# ENDPOINTS DE BACKUP GENERAL PARA ADMINISTRADOR
+# Agregar estas funciones al final de actas/api_views.py
+# ============================================
+
+import subprocess
+from pathlib import Path
+from django.core.management import call_command
+from io import StringIO
+
+# ============================================
+# 1. LISTAR BACKUPS DISPONIBLES
+# ============================================
+@csrf_exempt
+def listar_backups_api(request):
+    """
+    Lista todos los backups disponibles en el servidor.
+    Solo accesible para administradores.
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Autenticar y verificar que sea admin
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+        
+        # Verificar que sea administrador
+        if not user.is_staff and not user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos de administrador'
+            }, status=403)
+        
+        # Obtener carpeta de backups
+        backup_dir = Path(settings.BASE_DIR) / 'backups'
+        
+        if not backup_dir.exists():
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            return JsonResponse({
+                'success': True,
+                'backups': [],
+                'message': 'No hay backups disponibles'
+            })
+        
+        # Listar archivos .sql.gz
+        backups = []
+        for backup_file in backup_dir.glob('*.sql.gz'):
+            stat = backup_file.stat()
+            backups.append({
+                'filename': backup_file.name,
+                'size': round(stat.st_size / (1024 * 1024), 2),  # MB
+                'created': datetime.fromtimestamp(stat.st_ctime).strftime('%Y-%m-%d %H:%M:%S'),
+                'timestamp': stat.st_ctime,
+            })
+        
+        # Ordenar por fecha (más reciente primero)
+        backups.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return JsonResponse({
+            'success': True,
+            'backups': backups,
+            'total': len(backups)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al listar backups: {str(e)}'
+        }, status=500)
+
+
+# ============================================
+# 2. CREAR NUEVO BACKUP
+# ============================================
+@csrf_exempt
+def crear_backup_api(request):
+    """
+    Crea un nuevo backup de la base de datos.
+    Solo accesible para administradores.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Autenticar y verificar que sea admin
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+        
+        # Verificar que sea administrador
+        if not user.is_staff and not user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos de administrador'
+            }, status=403)
+        
+        # Ejecutar comando de backup
+        out = StringIO()
+        call_command('backup_database', stdout=out)
+        output = out.getvalue()
+        
+        # Extraer nombre del archivo y tamaño del output
+        lines = output.strip().split('\n')
+        filename = None
+        size = None
+        
+        for line in lines:
+            if 'Archivo:' in line:
+                filename = line.split('Archivo:')[1].strip()
+            elif 'Tamaño:' in line:
+                size = line.split('Tamaño:')[1].strip()
+        
+        if filename:
+            return JsonResponse({
+                'success': True,
+                'message': 'Backup creado exitosamente',
+                'filename': filename,
+                'size': size
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se pudo crear el backup'
+            }, status=500)
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al crear backup: {str(e)}'
+        }, status=500)
+
+
+# ============================================
+# 3. DESCARGAR BACKUP
+# ============================================
+@csrf_exempt
+def descargar_backup_api(request, filename):
+    """
+    Descarga un archivo de backup específico.
+    Solo accesible para administradores.
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Autenticar y verificar que sea admin
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+        
+        # Verificar que sea administrador
+        if not user.is_staff and not user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos de administrador'
+            }, status=403)
+        
+        # Verificar que el archivo existe
+        backup_dir = Path(settings.BASE_DIR) / 'backups'
+        backup_file = backup_dir / filename
+        
+        if not backup_file.exists() or not backup_file.is_file():
+            return JsonResponse({
+                'success': False,
+                'error': 'Archivo de backup no encontrado'
+            }, status=404)
+        
+        # Verificar que sea un archivo .sql.gz
+        if not filename.endswith('.sql.gz'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Tipo de archivo no válido'
+            }, status=400)
+        
+        # Enviar archivo
+        response = FileResponse(
+            open(backup_file, 'rb'),
+            content_type='application/gzip'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al descargar backup: {str(e)}'
+        }, status=500)
+
+
+# ============================================
+# 4. RESTAURAR BACKUP
+# ============================================
+@csrf_exempt
+def restaurar_backup_api(request):
+    """
+    Restaura la base de datos desde un backup.
+    Solo accesible para administradores.
+    ADVERTENCIA: Esta operación es DESTRUCTIVA.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Autenticar y verificar que sea admin
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+        
+        # Verificar que sea administrador
+        if not user.is_staff and not user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos de administrador'
+            }, status=403)
+        
+        # Obtener nombre del archivo
+        data = json.loads(request.body)
+        filename = data.get('filename')
+        confirmacion = data.get('confirmacion', '')  # Usuario debe escribir "RESTAURAR"
+        
+        if not filename:
+            return JsonResponse({
+                'success': False,
+                'error': 'Nombre de archivo no proporcionado'
+            }, status=400)
+        
+        # Verificar confirmación
+        if confirmacion != 'RESTAURAR':
+            return JsonResponse({
+                'success': False,
+                'error': 'Debes escribir "RESTAURAR" para confirmar esta acción destructiva'
+            }, status=400)
+        
+        # Verificar que el archivo existe
+        backup_dir = Path(settings.BASE_DIR) / 'backups'
+        backup_file = backup_dir / filename
+        
+        if not backup_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Archivo de backup no encontrado'
+            }, status=404)
+        
+        # Ejecutar comando de restore
+        out = StringIO()
+        try:
+            call_command('restore_database', str(backup_file), stdout=out)
+            output = out.getvalue()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Base de datos restaurada exitosamente',
+                'output': output
+            })
+        except Exception as restore_error:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error durante la restauración: {str(restore_error)}'
+            }, status=500)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos JSON inválidos'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al restaurar backup: {str(e)}'
+        }, status=500)
+
+
+# ============================================
+# 5. ELIMINAR BACKUP
+# ============================================
+@csrf_exempt
+def eliminar_backup_api(request, filename):
+    """
+    Elimina un archivo de backup específico.
+    Solo accesible para administradores.
+    """
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Autenticar y verificar que sea admin
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+        
+        # Verificar que sea administrador
+        if not user.is_staff and not user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos de administrador'
+            }, status=403)
+        
+        # Verificar que el archivo existe
+        backup_dir = Path(settings.BASE_DIR) / 'backups'
+        backup_file = backup_dir / filename
+        
+        if not backup_file.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Archivo de backup no encontrado'
+            }, status=404)
+        
+        # Verificar que sea un archivo .sql.gz
+        if not filename.endswith('.sql.gz'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Tipo de archivo no válido'
+            }, status=400)
+        
+        # Eliminar archivo
+        backup_file.unlink()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Backup {filename} eliminado correctamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al eliminar backup: {str(e)}'
+        }, status=500)

@@ -59,5 +59,10 @@ urlpatterns = [
     path('api/firmas/pendientes/', api_views.firmas_pendientes_api, name='api_firmas_pendientes'),
     path('api/perfil/exportar-datos/', api_views.exportar_datos_usuario_api, name='api_exportar_datos'),
     path('api/perfil/importar-datos/', api_views.importar_datos_usuario_api, name='api_importar_datos'),
-    path('api/perfil/confirmar-importacion/', api_views.confirmar_importacion_datos_api, name='api_confirmar_importacion')
+    path('api/perfil/confirmar-importacion/', api_views.confirmar_importacion_datos_api, name='api_confirmar_importacion'),
+    path('api/admin/backups/', api_views.listar_backups_api, name='api_listar_backups'),
+    path('api/admin/backups/crear/', api_views.crear_backup_api, name='api_crear_backup'),
+    path('api/admin/backups/descargar/<str:filename>/', api_views.descargar_backup_api, name='api_descargar_backup'),
+    path('api/admin/backups/restaurar/', api_views.restaurar_backup_api, name='api_restaurar_backup'),
+    path('api/admin/backups/eliminar/<str:filename>/', api_views.eliminar_backup_api, name='api_eliminar_backup'),
 ]
