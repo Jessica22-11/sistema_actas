@@ -203,8 +203,25 @@ def editar_usuario(request, user_id):
     return render(request, 'accounts/editar_usuario.html', {'usuario': usuario})
 
 # Vista para eliminar usuario
+@login_required
 def eliminar_usuario(request, user_id):
+    # Verificar que el usuario tenga permisos (solo admin y director pueden eliminar)
+    if request.user.rol not in ['admin', 'director']:
+        messages.error(request, 'No tienes permisos para eliminar usuarios.')
+        return redirect('accounts:usuarios')
+
     usuario = get_object_or_404(User, id=user_id)
+
+    # Evitar que el usuario se elimine a sí mismo
+    if usuario.id == request.user.id:
+        messages.error(request, 'No puedes eliminar tu propia cuenta.')
+        return redirect('accounts:usuarios')
+
+    # Evitar eliminar al superusuario principal
+    if usuario.is_superuser and User.objects.filter(is_superuser=True).count() == 1:
+        messages.error(request, 'No se puede eliminar el único superusuario del sistema.')
+        return redirect('accounts:usuarios')
+
     usuario.delete()
-    messages.success(request, 'Usuario eliminado correctamente.')
+    messages.success(request, f'Usuario {usuario.get_full_name()} eliminado correctamente.')
     return redirect('accounts:usuarios')

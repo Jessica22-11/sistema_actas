@@ -77,27 +77,11 @@ def detalle_acta(request, acta_id):
             and acta.creador == request.user
             and acta.estado == "en_revision"
         ),
-        'puede_comentar': request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director', 'aprendiz'],
-        "puede_editar": (
-            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
-            and acta.creador == request.user
-            and acta.estado == "borrador"
-        ),
-        "puede_enviar_revision": (
-            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
-            and acta.creador == request.user
-            and acta.estado == "borrador"
-        ),
-        "puede_finalizar": (
-            request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
-            and acta.creador == request.user
-            and acta.estado == "en_revision"
-        ),
         "puede_archivar": (
             request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']
             and acta.creador == request.user
             and acta.estado == "finalizada"
-),
+        ),
         'puede_comentar': request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director', 'aprendiz'],
     }
     return render(request, "actas/detalle.html", context)

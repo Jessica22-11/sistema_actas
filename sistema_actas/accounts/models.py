@@ -15,12 +15,9 @@ class User (AbstractUser) :
         ('admin', 'Administrador'),
         ('instructor', 'Instructor'),
         ('aprendiz','Aprendiz'),
-        ('instructor', 'Instructor'),
-        ('aprendiz','Aprendiz'),
     ]
     
     #Sobreescribimos algunos campos de AbstractUser y agrego nuevos campos
-    email = models.EmailField (unique=True, validators=[validate_email])
     email = models.EmailField (unique=True, validators=[validate_email])
     rol = models.CharField (max_length=20, choices=ROLES, default='funcionario')
     centro = models.CharField(max_length=100, default='Centro Minero')
@@ -68,18 +65,12 @@ class User (AbstractUser) :
     def save (self, *args, **kwargs):
         #Redimensionar firma digital si es muy grade
         super().save(*args, **kwargs)
-        
+
         if self.rol =='admin':
             self.is_staff = True
             self.is_superuser = True
             super().save(*args, **kwargs)
-            
-        
-        if self.rol =='admin':
-            self.is_staff = True
-            self.is_superuser = True
-            super().save(*args, **kwargs)
-            
+
         if self.firma_digital:
             img = Image.open(self.firma_digital.path)
             if img.height > 200 or img.width > 400:

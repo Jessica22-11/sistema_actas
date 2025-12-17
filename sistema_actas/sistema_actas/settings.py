@@ -13,9 +13,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os  # Modulo para interpretar el sistema operativo
 from decouple import config  # Permite manejar variables de entorno desde .env
 from pathlib import Path  # Para manejanvr rutas del sistema de forma segura
-import os  # Modulo para interpretar el sistema operativo
-from decouple import config  # Permite manejar variables de entorno desde .env
-from pathlib import Path  # Para manejanvr rutas del sistema de forma segura
 from dotenv import load_dotenv  # Cargar variables de entorno desde .env
 
 load_dotenv()
@@ -205,9 +202,6 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-# OpenAI (Integracion IA)
-OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
-
 # Seguridad
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -227,7 +221,6 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # CSRF Protection
 CSRF_COOKIE_SECURE = not DEBUG
@@ -299,8 +292,6 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"  # Después de logout vuelve al login
 
 PASSWORD_RESET_TIMEOUT = 3600
 PASSWORD_RESET_COMPLETE_URL = "/accounts/login/"
-PASSWORD_RESET_TIMEOUT = 3600
-PASSWORD_RESET_COMPLETE_URL = "/accounts/login/"
 
 
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-responder@sena.edu.co")
@@ -349,19 +340,3 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Sistema Actas SENA <noreply@sena.edu.co>')
-
-# Logging detallado para debugging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'WARNING',  # Solo warnings y errores
-    },
-}
