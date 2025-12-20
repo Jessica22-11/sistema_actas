@@ -34,7 +34,14 @@ urlpatterns = [
     # ============================================
     # API para app móvil (AGREGAR AL FINAL)
     # ============================================
+    # Autenticación y registro
     path('api/auth/login/', api_views.login_api, name='api_login'),
+    path('api/auth/logout/', api_views.logout_api, name='api_logout'),
+    path('api/auth/register/', api_views.register_api, name='api_register'),
+    path('api/auth/verificar-email/', api_views.verificar_codigo_api, name='api_verificar_email'),
+    path('api/auth/reenviar-codigo/', api_views.reenviar_codigo_api, name='api_reenviar_codigo'),
+
+    # Dashboard y perfil
     path('api/dashboard/', api_views.dashboard_api, name='api_dashboard'),
     path('api/actas/', api_views.actas_list_api, name='api_actas_list'),
     path('api/actas/<int:acta_id>/', api_views.acta_detalle_api, name='api_acta_detalle'),
@@ -51,7 +58,6 @@ urlpatterns = [
     path('api/compromisos/mis-compromisos/', api_views.mis_compromisos_api, name='api_mis_compromisos'),
     path('api/compromisos/<int:compromiso_id>/actualizar/', api_views.actualizar_compromiso_api, name='api_actualizar_compromiso'),
     path('api/actas/<int:acta_id>/aplicar-silencio/', api_views.aplicar_silencio_administrativo_api, name='api_aplicar_silencio'),
-    path('api/auth/register/', api_views.register_api, name='api_register'),
     path('api/perfil/actualizar-firma/', api_views.actualizar_firma_api, name='api_actualizar_firma'),
     path('api/auth/solicitar-codigo/', api_views.solicitar_codigo_recuperacion_api, name='api_solicitar_codigo'),
     path('api/auth/verificar-codigo/', api_views.verificar_codigo_recuperacion_api, name='api_verificar_codigo'),

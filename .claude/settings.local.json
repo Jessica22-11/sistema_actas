@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(.venvScriptsactivate)",
+      "Bash(git checkout:*)",
+      "Bash(dir:*)",
+      "Bash(timeout 5 python:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

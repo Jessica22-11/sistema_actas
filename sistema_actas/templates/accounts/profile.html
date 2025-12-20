@@ -140,6 +140,22 @@
         </div>
 
         <hr>
+
+        <!-- Sección de Copias de Seguridad -->
+        <div class="mb-3">
+            <h6 class="text-muted mb-2"><i class="fas fa-shield-alt me-2"></i>Gestión de Copias de Seguridad</h6>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'core:crear_backup_personal' %}" class="btn btn-success btn-sm">
+                    <i class="fas fa-download me-1"></i> Descargar mi Backup
+                </a>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#restaurarBackupModal">
+                    <i class="fas fa-upload me-1"></i> Restaurar mi Backup
+                </button>
+            </div>
+        </div>
+
+        <hr>
+
         <div class="perfil-actions">
             <a href="{% url 'accounts:logout' %}" class="btn btn-danger btn-sm me-2">
                 <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
@@ -150,6 +166,48 @@
         </div>
     </div>
 </div>
+
+<!-- Modal para Restaurar Backup -->
+<div class="modal fade" id="restaurarBackupModal" tabindex="-1" aria-labelledby="restaurarBackupModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="restaurarBackupModalLabel">
+                    <i class="fas fa-upload me-2"></i>Restaurar Copia de Seguridad Personal
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'core:restaurar_backup_personal' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Importante:</strong> Solo puedes restaurar backups que hayas creado previamente desde tu perfil.
+                    </div>
+                    <div class="mb-3">
+                        <label for="backup_file" class="form-label">
+                            <i class="fas fa-file-archive me-1"></i>Selecciona tu archivo de backup (.zip)
+                        </label>
+                        <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".zip" required>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Esta acción verificará y mostrará la información contenida en tu backup.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-1"></i>Restaurar Backup
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 

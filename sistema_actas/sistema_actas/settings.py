@@ -17,10 +17,9 @@ from dotenv import load_dotenv  # Cargar variables de entorno desde .env
 
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-if not OPENAI_API_KEY:
-    raise ValueError("API Key de OpenAI no configurada")
+# OPENAI_API_KEY ya no se usa - el proyecto usa GROQ
+# La configuración de GROQ está en las líneas 302-309
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", default="")  # Opcional, legacy
 
 LOGS_DIR = os.path.join("logs")
 os.makedirs(LOGS_DIR, exist_ok=True)  # crea la carpeta automáticamente si no existe

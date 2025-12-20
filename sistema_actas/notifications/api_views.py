@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 from .models import Notification
 import json
+from actas.api_views import get_user_from_token
 
 User = get_user_model()
 
@@ -18,20 +19,13 @@ def notificaciones_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticación con token seguro
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Filtros opcionales
         leida = request.GET.get('leida')  # 'true' o 'false'
         tipo = request.GET.get('tipo')
@@ -77,12 +71,7 @@ def notificaciones_api(request):
                 'total_no_leidas': no_leidas,
             }
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -102,18 +91,11 @@ def contar_no_leidas_api(request):
         }, status=405)
     
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticación con token seguro
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Contar no leídas
         no_leidas = Notification.objects.filter(usuario=user, leida=False).count()
         
@@ -123,12 +105,7 @@ def contar_no_leidas_api(request):
                 'count': no_leidas
             }
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -146,20 +123,13 @@ def marcar_leida_api(request, notificacion_id):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticación con token seguro
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener notificación
         try:
             notificacion = Notification.objects.get(id=notificacion_id, usuario=user)
@@ -171,17 +141,12 @@ def marcar_leida_api(request, notificacion_id):
         
         # Marcar como leída
         notificacion.marcar_como_leida()
-        
+
         return JsonResponse({
             'success': True,
             'message': 'Notificación marcada como leída'
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -199,20 +164,13 @@ def marcar_todas_leidas_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticación con token seguro
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Marcar todas como leídas
         notificaciones = Notification.objects.filter(usuario=user, leida=False)
         count = 0
@@ -225,12 +183,7 @@ def marcar_todas_leidas_api(request):
             'message': f'{count} notificaciones marcadas como leídas',
             'count': count
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -248,20 +201,13 @@ def eliminar_notificacion_api(request, notificacion_id):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticación con token seguro
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener notificación
         try:
             notificacion = Notification.objects.get(id=notificacion_id, usuario=user)
@@ -273,17 +219,12 @@ def eliminar_notificacion_api(request, notificacion_id):
         
         # Eliminar
         notificacion.delete()
-        
+
         return JsonResponse({
             'success': True,
             'message': 'Notificación eliminada'
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,

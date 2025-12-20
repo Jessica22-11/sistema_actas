@@ -5,32 +5,40 @@ from .models import User
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'rol', 'telefono', 'firma_digital']
+        fields = ['first_name', 'last_name', 'email', 'telefono', 'firma_digital']
 
     def clean_email(self):
         email = self.cleaned_data.get("email", "").lower()
-        rol = self.cleaned_data.get("rol")
 
-        if rol == 'aprendiz':
-            dominios_validos = ['@soy.sena.edu.co', '@gmail.com']
-            if not any(email.endswith(d) for d in dominios_validos):
-                raise forms.ValidationError(
-                    "El correo del aprendiz debe ser institucional @soy.sena.edu.co o @gmail.com"
-                )
+        # Validar que el email no esté ya registrado
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Este correo ya está registrado.")
 
-        elif rol in ['funcionario', 'coordinador', 'director', 'instructor']:
-            dominios_validos = ['@sena.edu.co', '@gmail.com']
-            if not any(email.endswith(d) for d in dominios_validos):
-                raise forms.ValidationError(
-                    "El correo debe ser institucional @sena.edu.co o @gmail.com"
-                )
-
-        elif rol == 'admin':
+        # Validar formato de dominios permitidos
+        dominios_validos = ['@soy.sena.edu.co', '@sena.edu.co', '@gmail.com', '@hotmail.com', '@outlook.com']
+        if not any(email.endswith(d) for d in dominios_validos):
             raise forms.ValidationError(
-                "No puedes registrarte como Administrador. Este rol solo puede ser asignado por el sistema."
+                "El correo debe ser @soy.sena.edu.co, @sena.edu.co o un correo externo válido (gmail, hotmail, outlook)"
             )
 
         return email
+
+    def clean_telefono(self):
+        telefono = self.cleaned_data.get("telefono", "").strip()
+
+        # Si está vacío, es opcional
+        if not telefono:
+            return telefono
+
+        # Validar que solo contenga números
+        if not telefono.isdigit():
+            raise forms.ValidationError("El teléfono debe contener solo números.")
+
+        # Validar que tenga exactamente 10 dígitos
+        if len(telefono) != 10:
+            raise forms.ValidationError("El teléfono debe tener exactamente 10 dígitos.")
+
+        return telefono
 
     def clean_firma_digital(self):
         firma = self.cleaned_data.get("firma_digital")

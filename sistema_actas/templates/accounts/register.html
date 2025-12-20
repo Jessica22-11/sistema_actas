@@ -228,24 +228,26 @@ html, body {
                                 </div>
 
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-md-12">
                                         <div class="form-floating mb-3">
-                                            <select class="form-select" id="rol" name="rol" required>
-                                                <option value="">Seleccione su rol</option>
-                                                <option value="funcionario">Funcionario</option>
-                                                <option value="coordinador">Coordinador</option>
-                                                <option value="director">Director</option>
-                                                <option value="instructor">Instructor</option>
-                                            </select>
-                                            <label for="rol">Rol en el Centro</label>
+                                            <input type="tel" class="form-control" id="telefono" name="telefono"
+                                                   pattern="[0-9]{10}" maxlength="10"
+                                                   placeholder="3001234567"
+                                                   title="Debe ser un número de 10 dígitos">
+                                            <label for="telefono">Teléfono (opcional - 10 dígitos)</label>
                                         </div>
+                                        <small class="text-muted">Ejemplo: 3001234567</small>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="form-floating mb-3">
-                                            <input type="tel" class="form-control" id="telefono" name="telefono">
-                                            <label for="telefono">Teléfono (opcional)</label>
-                                        </div>
-                                    </div>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Nota:</strong> Tu rol será asignado automáticamente según el dominio de tu correo electrónico:
+                                    <ul class="mb-0 mt-2">
+                                        <li><strong>@soy.sena.edu.co</strong> → Aprendiz</li>
+                                        <li><strong>@sena.edu.co</strong> → Instructor</li>
+                                        <li><strong>Otros dominios</strong> (@gmail.com, @hotmail.com, etc.) → Invitado</li>
+                                    </ul>
                                 </div>
 
                                 <div class="d-flex justify-content-end">
@@ -482,14 +484,23 @@ function validateStep(step) {
 }
 
 function generateConfirmation() {
+    // Detectar el rol automáticamente basado en el email
+    const email = $('#email').val().trim().toLowerCase();
+    let rolDetectado = 'Invitado';
+    if (email.endsWith('@soy.sena.edu.co')) {
+        rolDetectado = 'Aprendiz';
+    } else if (email.endsWith('@sena.edu.co')) {
+        rolDetectado = 'Instructor';
+    }
+
     const data = {
         'Nombres': $('#first_name').val() + ' ' + $('#last_name').val(),
         'Email': $('#email').val(),
-        'Rol': $('#rol option:selected').text(),
+        'Rol (auto-detectado)': rolDetectado,
         'Teléfono': $('#telefono').val() || 'No especificado',
         'Firma Digital': $('#firma_digital')[0].files.length > 0 ? 'Cargada' : 'No cargada'
     };
-    
+
     let html = '';
     for (const [key, value] of Object.entries(data)) {
         html += `
@@ -499,18 +510,39 @@ function generateConfirmation() {
             </div>
         `;
     }
-    
+
     $('#confirmation-data').html(html);
 }
 
 // Event listeners
 $(document).ready(function() {
-    // Auto-generar username desde email
-    $('#email').on('input', function() {
-        const email = $(this).val().trim();
-        const username = email.split('@')[0];
-        $('#username').val(username);
+    // Auto-generar username desde nombre y apellido
+    $('#first_name, #last_name').on('input', function() {
+        const firstName = $('#first_name').val().trim().toLowerCase();
+        const lastName = $('#last_name').val().trim().toLowerCase();
+
+        if (firstName && lastName) {
+            // Limpiar acentos y caracteres especiales
+            const cleanName = firstName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '.');
+            const cleanLastName = lastName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '.');
+            const username = `${cleanName}.${cleanLastName}`;
+            $('#username').val(username);
+        }
     });
+
+    // Validación de teléfono: solo números, máximo 10 dígitos
+    $('#telefono').on('input', function() {
+        // Eliminar caracteres no numéricos
+        let valor = $(this).val().replace(/\D/g, '');
+
+        // Limitar a 10 dígitos
+        if (valor.length > 10) {
+            valor = valor.substring(0, 10);
+        }
+
+        $(this).val(valor);
+    });
+
     // Validación de fortaleza de contraseña
     $('#password1').on('input', function() {
         const password = $(this).val();

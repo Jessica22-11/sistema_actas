@@ -13,6 +13,8 @@ urlpatterns = [
     # ==========================================================
     path("login/", views.login_view, name="login"),
     path("register/", views.register_view, name="register"),
+    path("verificar-email/<str:email>/", views.verificar_email_view, name="verificar_email"),
+    path("reenviar-codigo/<str:email>/", views.reenviar_codigo_view, name="reenviar_codigo"),
     path("logout/", views.logout_view, name="logout"),
     path("profile/", views.profile, name="profile"),
     path("settings/", views.settings_view, name="settings"),

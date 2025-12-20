@@ -102,6 +102,30 @@ def login_api(request):
             user = authenticate(request, username=username, password=password)
 
             if user is not None:
+                # Verificar si el email está verificado
+                if not user.email_verificado:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Debes verificar tu email antes de iniciar sesión',
+                        'requiere_verificacion': True,
+                        'email': user.email
+                    }, status=403)
+
+                # Verificar si la cuenta está aprobada
+                if not user.cuenta_aprobada:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Tu cuenta aún no ha sido aprobada',
+                        'requiere_aprobacion': True
+                    }, status=403)
+
+                # Verificar si la cuenta está activa
+                if not user.activo:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Tu cuenta ha sido desactivada. Contacta al administrador'
+                    }, status=403)
+
                 # Obtener o crear token para el usuario
                 token, created = Token.objects.get_or_create(user=user)
 
@@ -117,6 +141,8 @@ def login_api(request):
                         'last_name': user.last_name,
                         'rol': user.rol,
                         'firma_digital': user.firma_digital.url if user.firma_digital else None,
+                        'email_verificado': user.email_verificado,
+                        'cuenta_aprobada': user.cuenta_aprobada,
                     }
                 })
             else:
@@ -177,6 +203,332 @@ def logout_api(request):
         'success': False,
         'error': 'Método no permitido'
     }, status=405)
+
+
+# ============================================
+#  APIs de Registro y Verificación
+# ============================================
+
+@csrf_exempt
+def register_api(request):
+    """
+    API de registro para nuevos usuarios.
+
+    Recibe:
+        - email: Email del usuario
+        - password: Contraseña
+        - first_name: Nombre
+        - last_name: Apellido
+        - username: Nombre de usuario (opcional, se genera del email si no se provee)
+
+    Flujo:
+        1. Detecta automáticamente el rol basándose en el dominio del email
+        2. Crea el usuario (sin aprobar aún)
+        3. Genera código de verificación de 6 dígitos
+        4. Envía email con el código
+        5. Retorna success y pide verificación
+
+    Retorna:
+        - success: True/False
+        - message: Mensaje descriptivo
+        - user_id: ID del usuario creado
+        - rol_asignado: Rol detectado automáticamente
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+
+    try:
+        from .utils import detectar_rol_por_email, crear_codigo_verificacion, enviar_email_verificacion
+
+        # Leer datos del request
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
+        username = data.get('username', '').strip()
+
+        # Validaciones básicas
+        if not email or not password or not first_name or not last_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'Email, contraseña, nombre y apellido son requeridos'
+            }, status=400)
+
+        # Validar formato de email
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            validate_email(email)
+        except DjangoValidationError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Formato de email inválido'
+            }, status=400)
+
+        # Verificar si el email ya existe
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Este email ya está registrado'
+            }, status=400)
+
+        # Generar username si no se proporciona
+        if not username:
+            username = email.split('@')[0]
+            # Asegurar que el username sea único
+            base_username = username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+        # Detectar rol automáticamente
+        rol_detectado = detectar_rol_por_email(email)
+
+        # Crear usuario (sin verificar ni aprobar aún)
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            rol=rol_detectado,
+            email_verificado=False,
+            cuenta_aprobada=False,
+            activo=True
+        )
+
+        # Crear código de verificación
+        codigo_obj = crear_codigo_verificacion(user, tipo='registro')
+
+        # Enviar email con el código
+        email_enviado = enviar_email_verificacion(user, codigo_obj.codigo)
+
+        if not email_enviado:
+            # Si falla el envío del email, eliminar el usuario creado
+            user.delete()
+            return JsonResponse({
+                'success': False,
+                'error': 'Error al enviar el email de verificación. Intenta de nuevo'
+            }, status=500)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Registro exitoso. Revisa tu email para obtener el código de verificación',
+            'user_id': user.id,
+            'rol_asignado': rol_detectado,
+            'email': email
+        }, status=201)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Formato de datos inválido'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': handle_error(e, "Error durante el registro")
+        }, status=500)
+
+
+@csrf_exempt
+def verificar_codigo_api(request):
+    """
+    API para verificar el código de 6 dígitos enviado por email.
+
+    Recibe:
+        - email: Email del usuario
+        - codigo: Código de 6 dígitos
+
+    Flujo:
+        1. Busca el código más reciente del usuario
+        2. Verifica que no haya expirado (15 minutos)
+        3. Verifica que el código coincida
+        4. Marca el email como verificado
+        5. Aprueba la cuenta automáticamente
+        6. Marca el código como usado
+
+    Retorna:
+        - success: True/False
+        - message: Mensaje descriptivo
+        - token: Token de autenticación (si verificación exitosa)
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+
+    try:
+        from .utils import verificar_codigo, aprobar_usuario_automaticamente
+        from accounts.models import CodigoVerificacion
+
+        # Leer datos del request
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+        codigo_ingresado = data.get('codigo', '').strip()
+
+        if not email or not codigo_ingresado:
+            return JsonResponse({
+                'success': False,
+                'error': 'Email y código son requeridos'
+            }, status=400)
+
+        # Buscar usuario
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Usuario no encontrado'
+            }, status=404)
+
+        # Verificar si ya está verificado
+        if user.email_verificado and user.cuenta_aprobada:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tu cuenta ya está verificada. Puedes iniciar sesión'
+            }, status=400)
+
+        # Verificar el código
+        es_valido, mensaje_error = verificar_codigo(user, codigo_ingresado, tipo='registro')
+
+        if not es_valido:
+            return JsonResponse({
+                'success': False,
+                'error': mensaje_error
+            }, status=400)
+
+        # Código válido: aprobar usuario automáticamente
+        user = aprobar_usuario_automaticamente(user)
+
+        # Marcar el código como usado
+        codigo_obj = CodigoVerificacion.objects.filter(
+            user=user,
+            codigo=codigo_ingresado,
+            tipo='registro',
+            usado=False
+        ).first()
+
+        if codigo_obj:
+            codigo_obj.marcar_usado()
+
+        # Generar token de autenticación
+        token, created = Token.objects.get_or_create(user=user)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Email verificado exitosamente. Tu cuenta ha sido aprobada',
+            'token': token.key,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'rol': user.rol,
+                'email_verificado': user.email_verificado,
+                'cuenta_aprobada': user.cuenta_aprobada,
+            }
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Formato de datos inválido'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': handle_error(e, "Error al verificar el código")
+        }, status=500)
+
+
+@csrf_exempt
+def reenviar_codigo_api(request):
+    """
+    API para reenviar el código de verificación si expiró.
+
+    Recibe:
+        - email: Email del usuario
+
+    Flujo:
+        1. Busca el usuario
+        2. Verifica que no esté ya verificado
+        3. Genera nuevo código de 6 dígitos
+        4. Envía email con el nuevo código
+
+    Retorna:
+        - success: True/False
+        - message: Mensaje descriptivo
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+
+    try:
+        from .utils import crear_codigo_verificacion, enviar_email_verificacion
+
+        # Leer datos del request
+        data = json.loads(request.body)
+        email = data.get('email', '').strip().lower()
+
+        if not email:
+            return JsonResponse({
+                'success': False,
+                'error': 'Email es requerido'
+            }, status=400)
+
+        # Buscar usuario
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Usuario no encontrado'
+            }, status=404)
+
+        # Verificar si ya está verificado
+        if user.email_verificado and user.cuenta_aprobada:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tu cuenta ya está verificada. Puedes iniciar sesión'
+            }, status=400)
+
+        # Crear nuevo código de verificación
+        codigo_obj = crear_codigo_verificacion(user, tipo='registro')
+
+        # Enviar email con el nuevo código
+        email_enviado = enviar_email_verificacion(user, codigo_obj.codigo)
+
+        if not email_enviado:
+            return JsonResponse({
+                'success': False,
+                'error': 'Error al enviar el email. Intenta de nuevo'
+            }, status=500)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Código reenviado exitosamente. Revisa tu email'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Formato de datos inválido'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': handle_error(e, "Error al reenviar el código")
+        }, status=500)
 
 
 # ============================================
@@ -319,17 +671,10 @@ def actas_list_api(request):
         }, status=405)
 
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
 
         # Obtener parámetros de filtro
         estado = request.GET.get('estado', None)  # borrador, en_revision, finalizada, archivada
@@ -417,18 +762,13 @@ def actas_list_api(request):
                 }
             }
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
             'error': handle_error(e)
         }, status=500)
-        
+
 
 @csrf_exempt
 def acta_detalle_api(request, acta_id):
@@ -440,20 +780,13 @@ def acta_detalle_api(request, acta_id):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener acta
         try:
             acta = Acta.objects.get(id=acta_id)
@@ -564,37 +897,25 @@ def acta_detalle_api(request, acta_id):
             'success': True,
             'data': acta_data
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
             'error': handle_error(e)
         }, status=500)
-        
+
 
 
 """ API para obtener y actualizar el perfil del usuario"""
 @csrf_exempt
 def perfil_api(request):
-    
-    # Obtener token del header
-    token = request.headers.get('Authorization', '').replace('Bearer ', '')
-    
-    if not token or not token.startswith('token_'):
-        return JsonResponse({
-            'success': False,
-            'error': 'No autenticado'
-        }, status=401)
-    
+
+    # Autenticar usuario
+    user, error_response = get_user_from_token(request)
+    if error_response:
+        return error_response
+
     try:
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
         # GET - Obtener perfil
         if request.method == 'GET':
             user_data = {
@@ -660,12 +981,7 @@ def perfil_api(request):
                 'success': False,
                 'error': 'Método no permitido'
             }, status=405)
-            
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -683,20 +999,13 @@ def cambiar_password_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener datos del request
         data = json.loads(request.body)
         current_password = data.get('current_password')
@@ -745,12 +1054,7 @@ def cambiar_password_api(request):
             'success': True,
             'message': 'Contraseña actualizada correctamente'
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -766,20 +1070,13 @@ def usuarios_list_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener todos los usuarios activos
         usuarios = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
         
@@ -799,18 +1096,13 @@ def usuarios_list_api(request):
             'success': True,
             'data': usuarios_data
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
             'error': handle_error(e)
         }, status=500)
-    
+
 @csrf_exempt
 def crear_acta_api(request):
     """
@@ -821,20 +1113,13 @@ def crear_acta_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener datos del request
         data = json.loads(request.body)
         
@@ -893,12 +1178,7 @@ def crear_acta_api(request):
                 'numero_acta': acta.numero_acta,
             }
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -917,20 +1197,13 @@ def generar_acta_ia_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener datos del request
         data = json.loads(request.body)
         prompt = data.get('prompt', '')
@@ -967,12 +1240,7 @@ def generar_acta_ia_api(request):
                 'success': False,
                 'error': handle_error(e, 'Error al generar contenido con IA')
             }, status=500)
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -992,17 +1260,10 @@ def actas_pendientes_firma_api(request):
         }, status=405)
 
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
 
         # Parámetros de paginación
         try:
@@ -1076,12 +1337,7 @@ def actas_pendientes_firma_api(request):
                 }
             }
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -1101,18 +1357,11 @@ def firmar_acta_api(request):
         }, status=405)
     
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener datos del request
         data = json.loads(request.body)
         firma_id = data.get('firma_id')
@@ -1192,12 +1441,7 @@ def firmar_acta_api(request):
                 'success': False,
                 'error': handle_error(e, 'Error al procesar la imagen de firma')
             }, status=500)
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -1215,20 +1459,13 @@ def cambiar_estado_acta_api(request, acta_id):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener acta
         try:
             acta = Acta.objects.get(id=acta_id)
@@ -1281,18 +1518,13 @@ def cambiar_estado_acta_api(request, acta_id):
                 'estado_nuevo': nuevo_estado,
             }
         })
-        
-    except User.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Usuario no encontrado'
-        }, status=401)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
             'error': handle_error(e)
         }, status=500)
-    
+
 
 @csrf_exempt
 def crear_compromiso_api(request):
@@ -1304,20 +1536,13 @@ def crear_compromiso_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener datos del request
         data = json.loads(request.body)
         acta_id = data.get('acta_id')
@@ -1435,20 +1660,13 @@ def editar_acta_api(request, acta_id):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener el acta
         try:
             acta = Acta.objects.get(id=acta_id)
@@ -1589,20 +1807,13 @@ def generar_pdf_api(request, acta_id):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener acta
         try:
             acta = Acta.objects.get(id=acta_id)
@@ -1969,20 +2180,13 @@ def mis_compromisos_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener compromisos del usuario
         compromisos = Compromiso.objects.filter(
             responsable=user
@@ -2039,20 +2243,13 @@ def actualizar_compromiso_api(request, compromiso_id):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener compromiso
         try:
             compromiso = Compromiso.objects.get(id=compromiso_id)
@@ -2150,20 +2347,13 @@ def aplicar_silencio_administrativo_api(request, acta_id):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
+
     try:
-        # Obtener token del header
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        
-        if not token or not token.startswith('token_'):
-            return JsonResponse({
-                'success': False,
-                'error': 'No autenticado'
-            }, status=401)
-        
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-        
+        # Autenticar usuario
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
         # Obtener el acta
         try:
             acta = Acta.objects.get(id=acta_id)
@@ -2703,32 +2893,11 @@ def firmas_pendientes_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
-    # Verificar autenticación (sistema personalizado)
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return JsonResponse({
-            'success': False,
-            'error': 'No autenticado'
-        }, status=401)
-    
-    token = auth_header.split(' ')[1]
-    
-    # Sistema de token personalizado: token_{id}
-    if not token.startswith('token_'):
-        return JsonResponse({
-            'success': False,
-            'error': 'Token inválido'
-        }, status=401)
-    
-    try:
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-    except (ValueError, User.DoesNotExist):
-        return JsonResponse({
-            'success': False,
-            'error': 'Token inválido'
-        }, status=401)
+
+    # Autenticar usuario
+    user, error_response = get_user_from_token(request)
+    if error_response:
+        return error_response
 
     try:
         # Obtener firmas pendientes del usuario
@@ -2799,32 +2968,12 @@ def exportar_datos_usuario_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
-    # Autenticación
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return JsonResponse({
-            'success': False,
-            'error': 'No autenticado'
-        }, status=401)
-    
-    token = auth_header.split(' ')[1]
-    
-    if not token.startswith('token_'):
-        return JsonResponse({
-            'success': False,
-            'error': 'Token inválido'
-        }, status=401)
-    
-    try:
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-    except (ValueError, User.DoesNotExist):
-        return JsonResponse({
-            'success': False,
-            'error': 'Token inválido'
-        }, status=401)
-    
+
+    # Autenticar usuario
+    user, error_response = get_user_from_token(request)
+    if error_response:
+        return error_response
+
     try:
         import zipfile
         import tempfile
@@ -2958,32 +3107,12 @@ def importar_datos_usuario_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
-    # Autenticación
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return JsonResponse({
-            'success': False,
-            'error': 'No autenticado'
-        }, status=401)
-    
-    token = auth_header.split(' ')[1]
-    
-    if not token.startswith('token_'):
-        return JsonResponse({
-            'success': False,
-            'error': 'Token inválido'
-        }, status=401)
-    
-    try:
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-    except (ValueError, User.DoesNotExist):
-        return JsonResponse({
-            'success': False,
-            'error': 'Token inválido'
-        }, status=401)
-    
+
+    # Autenticar usuario
+    user, error_response = get_user_from_token(request)
+    if error_response:
+        return error_response
+
     try:
         import zipfile
         import tempfile
@@ -3097,32 +3226,12 @@ def confirmar_importacion_datos_api(request):
             'success': False,
             'error': 'Método no permitido'
         }, status=405)
-    
-    # Autenticación
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return JsonResponse({
-            'success': False,
-            'error': 'No autenticado'
-        }, status=401)
-    
-    token = auth_header.split(' ')[1]
-    
-    if not token.startswith('token_'):
-        return JsonResponse({
-            'success': False,
-            'error': 'Token inválido'
-        }, status=401)
-    
-    try:
-        user_id = int(token.replace('token_', ''))
-        user = User.objects.get(id=user_id)
-    except (ValueError, User.DoesNotExist):
-        return JsonResponse({
-            'success': False,
-            'error': 'Token inválido'
-        }, status=401)
-    
+
+    # Autenticar usuario
+    user, error_response = get_user_from_token(request)
+    if error_response:
+        return error_response
+
     try:
         import zipfile
         import tempfile

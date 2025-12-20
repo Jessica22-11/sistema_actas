@@ -29,15 +29,38 @@ def register_view(request):
     if request.method == "POST":
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
+            from actas.utils import detectar_rol_por_email, crear_codigo_verificacion, enviar_email_verificacion
+
             user = form.save(commit=False)
+
+            # ✅ Detectar rol automáticamente por dominio de email
+            rol_detectado = detectar_rol_por_email(user.email)
+            user.rol = rol_detectado
 
             # ✅ Asignar firma digital si se subió
             firma = request.FILES.get("firma_digital")
             if firma:
                 user.firma_digital = firma
 
-            # ✅ Generar username único basado en el email
-            base_username = user.email.split('@')[0]
+            # ✅ Generar username único basado en nombre y apellido
+            # Formato: nombre.apellido (sin espacios, en minúsculas, sin acentos)
+            import unicodedata
+
+            def limpiar_texto(texto):
+                """Elimina acentos y convierte a minúsculas"""
+                texto = texto.lower().strip()
+                # Eliminar acentos
+                texto = ''.join(c for c in unicodedata.normalize('NFD', texto)
+                               if unicodedata.category(c) != 'Mn')
+                # Reemplazar espacios por punto
+                texto = texto.replace(' ', '.')
+                return texto
+
+            nombre_limpio = limpiar_texto(user.first_name)
+            apellido_limpio = limpiar_texto(user.last_name)
+            base_username = f"{nombre_limpio}.{apellido_limpio}"
+
+            # Asegurar unicidad del username
             username = base_username
             counter = 1
             while User.objects.filter(username=username).exists():
@@ -45,17 +68,96 @@ def register_view(request):
                 counter += 1
             user.username = username
 
+            # ✅ Configurar cuenta sin verificar ni aprobar
+            user.email_verificado = False
+            user.cuenta_aprobada = False
+            user.activo = True
+
             # ✅ Guardar usuario en la base de datos
             user.save()
 
-            messages.success(request, "✅ Cuenta creada correctamente. Ahora puedes iniciar sesión.")
-            return redirect("accounts:login")
+            # ✅ Crear código de verificación
+            codigo_obj = crear_codigo_verificacion(user, tipo='registro')
+
+            # ✅ Enviar email con el código
+            email_enviado = enviar_email_verificacion(user, codigo_obj.codigo)
+
+            if email_enviado:
+                messages.success(request, f"Cuenta creada correctamente. Se ha enviado un código de verificación a {user.email}. Revisa tu correo.")
+                # Redirigir a página de verificación con el email
+                return redirect("accounts:verificar_email", email=user.email)
+            else:
+                messages.warning(request, "Cuenta creada, pero hubo un problema al enviar el email de verificación. Contacta al administrador.")
+                return redirect("accounts:verificar_email", email=user.email)
         else:
-            messages.error(request, "⚠️ Por favor corrige los errores en el formulario.")
+            messages.error(request, "Por favor corrige los errores en el formulario.")
     else:
         form = CustomUserCreationForm()
 
     return render(request, "accounts/register.html", {"form": form})
+
+
+def verificar_email_view(request, email):
+    """Vista para verificar el código de email después del registro"""
+    if request.method == "POST":
+        from actas.utils import verificar_codigo, aprobar_usuario_automaticamente
+        from accounts.models import CodigoVerificacion
+
+        codigo_ingresado = request.POST.get('codigo', '').strip()
+
+        try:
+            user = User.objects.get(email=email)
+
+            # Verificar el código
+            es_valido, mensaje_error = verificar_codigo(user, codigo_ingresado, tipo='registro')
+
+            if not es_valido:
+                messages.error(request, mensaje_error)
+                return render(request, "accounts/verificar_email.html", {"email": email})
+
+            # Código válido: aprobar usuario automáticamente
+            user = aprobar_usuario_automaticamente(user)
+
+            # Marcar el código como usado
+            codigo_obj = CodigoVerificacion.objects.filter(
+                user=user, codigo=codigo_ingresado, tipo='registro', usado=False
+            ).first()
+            if codigo_obj:
+                codigo_obj.marcar_usado()
+
+            messages.success(request, "Email verificado exitosamente. Tu cuenta ha sido aprobada. Ahora puedes iniciar sesión.")
+            return redirect("accounts:login")
+
+        except User.DoesNotExist:
+            messages.error(request, "Usuario no encontrado.")
+            return redirect("accounts:register")
+
+    return render(request, "accounts/verificar_email.html", {"email": email})
+
+
+def reenviar_codigo_view(request, email):
+    """Vista para reenviar el código de verificación"""
+    try:
+        from actas.utils import crear_codigo_verificacion, enviar_email_verificacion
+
+        user = User.objects.get(email=email)
+
+        # Crear nuevo código
+        codigo_obj = crear_codigo_verificacion(user, tipo='registro')
+
+        # Enviar email
+        email_enviado = enviar_email_verificacion(user, codigo_obj.codigo)
+
+        if email_enviado:
+            messages.success(request, f"Se ha enviado un nuevo código de verificación a {email}")
+        else:
+            messages.error(request, "Hubo un problema al enviar el email. Intenta de nuevo.")
+
+        return redirect("accounts:verificar_email", email=email)
+
+    except User.DoesNotExist:
+        messages.error(request, "Usuario no encontrado.")
+        return redirect("accounts:register")
 
 
 @login_required

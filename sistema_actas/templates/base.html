@@ -987,15 +987,19 @@
                 <a class="nav-link" href="{% url 'actas:actas_list' %}">
                     <i class="fas fa-file-alt"></i>Mis Actas
                 </a>
+                {% if user.email_verificado and user.cuenta_aprobada %}
                 <a class="nav-link" href="{% url 'actas:crear' %}">
                     <i class="fas fa-plus-circle"></i>Nueva Acta
                 </a>
+                {% endif %}
                 <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
                     <i class="fas fa-signature"></i>Firmas Pendientes
                 </a>
+                {% if user.rol == 'admin' %}
                 <a class="nav-link" href="{% url 'core:vista_backup' %}">
-                    <i class="fas fa-database me-1"></i>Copia De Seguridad
+                    <i class="fas fa-database me-1"></i>Copias de Seguridad
                 </a>
+                {% endif %}
                 <a class="nav-link" href="{% url 'actas:mis_compromisos' %}">
                     <i class="fas fa-tasks"></i>Compromisos
                 </a>
