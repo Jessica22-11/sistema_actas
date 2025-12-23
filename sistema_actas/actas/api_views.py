@@ -1167,9 +1167,17 @@ def crear_acta_api(request):
                     usuario=participante_usuario,
                     firmado=False,
                 )
+
+                # Enviar notificación por email al participante que debe firmar
+                try:
+                    from .email_service import enviar_email_solicitud_firma
+                    enviar_email_solicitud_firma(acta, participante_usuario)
+                except Exception as e:
+                    logger.warning(f'No se pudo enviar email de solicitud de firma a {participante_usuario.email}: {str(e)}')
+
             except User.DoesNotExist:
                 continue
-        
+
         return JsonResponse({
             'success': True,
             'message': 'Acta creada correctamente',
@@ -1422,7 +1430,14 @@ def firmar_acta_api(request):
                 # Todos firmaron, cambiar estado a finalizada
                 acta.estado = 'finalizada'
                 acta.save()
-                
+
+                # Enviar notificación al creador de que el acta está completamente firmada
+                try:
+                    from .email_service import enviar_email_acta_firmada_completa
+                    enviar_email_acta_firmada_completa(acta)
+                except Exception as e:
+                    logger.warning(f'No se pudo enviar email de acta firmada completa: {str(e)}')
+
                 return JsonResponse({
                     'success': True,
                     'message': 'Firma guardada correctamente. El acta ha sido finalizada.',
@@ -1614,7 +1629,14 @@ def crear_compromiso_api(request):
             estado='pendiente',
             porcentaje_avance=0
         )
-        
+
+        # Enviar notificación por email al responsable
+        try:
+            from .email_service import enviar_email_compromiso_asignado
+            enviar_email_compromiso_asignado(compromiso, responsable)
+        except Exception as e:
+            logger.warning(f'No se pudo enviar email de compromiso asignado: {str(e)}')
+
         return JsonResponse({
             'success': True,
             'message': 'Compromiso creado exitosamente',
@@ -2268,12 +2290,12 @@ def actualizar_compromiso_api(request, compromiso_id):
         
         # Obtener datos del request
         data = json.loads(request.body)
-        
+
         # Actualizar campos
         estado = data.get('estado')
         porcentaje_avance = data.get('porcentaje_avance')
         reporte_cumplimiento = data.get('reporte_cumplimiento', '')
-        
+
         # Validar estado
         estados_validos = ['pendiente', 'en_progreso', 'completado', 'vencido']
         if estado and estado not in estados_validos:
@@ -2281,7 +2303,7 @@ def actualizar_compromiso_api(request, compromiso_id):
                 'success': False,
                 'error': f'Estado inválido. Debe ser: {", ".join(estados_validos)}'
             }, status=400)
-        
+
         # Validar porcentaje
         if porcentaje_avance is not None:
             try:
@@ -2296,7 +2318,10 @@ def actualizar_compromiso_api(request, compromiso_id):
                     'success': False,
                     'error': 'Porcentaje inválido'
                 }, status=400)
-        
+
+        # Guardar estado anterior para notificación
+        estado_anterior = compromiso.get_estado_display() if hasattr(compromiso, 'get_estado_display') else compromiso.estado
+
         # Actualizar compromiso
         if estado:
             compromiso.estado = estado
@@ -2311,9 +2336,18 @@ def actualizar_compromiso_api(request, compromiso_id):
         
         if reporte_cumplimiento:
             compromiso.reporte_cumplimiento = reporte_cumplimiento
-        
+
         compromiso.save()
-        
+
+        # Enviar notificación por email si hubo cambio de estado
+        if estado and estado != estado_anterior:
+            try:
+                from .email_service import enviar_email_compromiso_actualizado
+                # El usuario que actualiza es el responsable mismo
+                enviar_email_compromiso_actualizado(compromiso, estado_anterior, user)
+            except Exception as e:
+                logger.warning(f'No se pudo enviar email de compromiso actualizado: {str(e)}')
+
         return JsonResponse({
             'success': True,
             'message': 'Compromiso actualizado exitosamente',

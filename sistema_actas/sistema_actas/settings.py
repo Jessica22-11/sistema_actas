@@ -276,6 +276,11 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "actas.email_service": {
+            "handlers": ["file"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 
