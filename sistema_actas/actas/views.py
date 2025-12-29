@@ -34,13 +34,20 @@ def detalle_acta(request, acta_id):
     acta = get_object_or_404(Acta, id=acta_id)
 
     # Verificar permisos
+    # 1. El creador puede ver el acta en cualquier estado
+    # 2. Los participantes solo pueden ver el acta si NO está en borrador
+    # 3. Los administradores pueden ver cualquier acta
+    es_creador = acta.creador == request.user
+    es_participante = acta.participantes.filter(usuario=request.user).exists()
+    es_admin = request.user.is_staff or request.user.rol == 'admin'
+
     if not (
-        acta.creador == request.user
-        or acta.participantes.filter(usuario=request.user).exists()
-        or request.user.is_staff
+        es_creador
+        or (es_participante and acta.estado != 'borrador')
+        or es_admin
     ):
         messages.error(request, "No tienes permisos para ver esta acta.")
-        return redirect("actas:list")
+        return redirect("actas:actas_list")
 
     # Obtener información personal
     participantes = acta.participantes.select_related("usuario").prefetch_related('firmas').all()
@@ -290,10 +297,42 @@ def enviar_revision(request, acta_id):
             mensaje=f"Tienes pendiente firmar el acta '{acta.numero_acta} - {acta.titulo}'. Fecha límite: {acta.fecha_limite_firmas.strftime('%d/%m/%Y')}",
             enlace=f"/actas/{acta.id}/",
         )
-        participantes_notificados += 1
-        print(f"✅ Notificación enviada a: {participante.usuario.email}")  # Para debug
 
-    messages.success(request, f"Acta enviada a revisión. {participantes_notificados} participantes han sido notificados.")
+        # Enviar email de solicitud de firma
+        try:
+            from .email_service import enviar_email_solicitud_firma
+            print(f"🔄 Intentando enviar email a: {participante.usuario.email}")
+            resultado = enviar_email_solicitud_firma(acta, participante.usuario)
+            if resultado:
+                print(f"✅ Email enviado exitosamente a: {participante.usuario.email}")
+            else:
+                print(f"⚠️ No se pudo enviar email a: {participante.usuario.email} (función retornó False)")
+        except Exception as e:
+            print(f"❌ Error al enviar email a {participante.usuario.email}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+        participantes_notificados += 1
+
+    # Enviar emails de compromisos asignados
+    compromisos_notificados = 0
+    for compromiso in acta.compromisos.all():
+        if compromiso.responsable and compromiso.responsable.email:
+            try:
+                from .email_service import enviar_email_compromiso_asignado
+                print(f"🔄 Intentando enviar email de compromiso a: {compromiso.responsable.email}")
+                resultado = enviar_email_compromiso_asignado(compromiso, compromiso.responsable)
+                if resultado:
+                    print(f"✅ Email de compromiso enviado exitosamente a: {compromiso.responsable.email}")
+                    compromisos_notificados += 1
+                else:
+                    print(f"⚠️ No se pudo enviar email de compromiso a: {compromiso.responsable.email}")
+            except Exception as e:
+                print(f"❌ Error al enviar email de compromiso a {compromiso.responsable.email}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+
+    messages.success(request, f"Acta enviada a revisión. {participantes_notificados} participantes y {compromisos_notificados} responsables de compromisos han sido notificados.")
     return redirect("actas:detalle", acta_id=acta_id)
 
 @login_required
@@ -679,11 +718,18 @@ def actas_list(request):
     search = request.GET.get('search')
 
     if request.user.rol == 'aprendiz':
-        actas = Acta.objects.filter(participantes__usuario=request.user).distinct()
+        # Aprendices solo ven actas donde son participantes Y que NO estén en borrador
+        actas = Acta.objects.filter(
+            participantes__usuario=request.user
+        ).exclude(estado='borrador').distinct()
 
     elif request.user.rol in ['instructor', 'funcionario', 'coordinador', 'director']:
+        # Instructores/funcionarios ven:
+        # 1. Actas que crearon (cualquier estado)
+        # 2. Actas donde son participantes (solo las que NO están en borrador)
         actas = Acta.objects.filter(
-            Q(creador=request.user) | Q(participantes__usuario=request.user)
+            Q(creador=request.user) |
+            (Q(participantes__usuario=request.user) & ~Q(estado='borrador'))
         ).distinct()
 
     elif request.user.rol == 'admin' or request.user.is_superuser:
@@ -826,14 +872,17 @@ def crear_acta(request):
             for comp_data in compromisos_data:
                 try:
                     responsable = User.objects.get(email=comp_data['responsable_email'])
-                    Compromiso.objects.create(
+                    compromiso = Compromiso.objects.create(
                         acta=acta,
                         descripcion=comp_data['descripcion'],
                         responsable=responsable,
                         fecha_limite=comp_data['fecha_limite']  # Ya es un objeto date
                     )
                     print(f"✅ Compromiso creado para: {responsable.email}")
-                    
+
+                    # NOTA: Los emails de compromisos se enviarán cuando el acta sea enviada a revisión,
+                    # no al momento de crear el acta en borrador
+
                 except User.DoesNotExist:
                     messages.warning(request, f'Responsable {comp_data["responsable_email"]} no encontrado.')
             

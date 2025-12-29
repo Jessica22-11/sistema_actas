@@ -27,7 +27,10 @@ def enviar_email_compromiso_asignado(compromiso, usuario_asignado):
         # Validar que el usuario tenga email
         if not usuario_asignado.email:
             logger.warning(f'Usuario {usuario_asignado.username} no tiene email configurado')
+            print(f"⚠️ Usuario {usuario_asignado.username} no tiene email configurado")
             return False
+
+        print(f"📧 Preparando email de compromiso para: {usuario_asignado.email}")
 
         # Preparar contexto para el template
         contexto = {
@@ -38,11 +41,15 @@ def enviar_email_compromiso_asignado(compromiso, usuario_asignado):
             'creador': compromiso.acta.creador.get_full_name() if compromiso.acta else 'Sistema',
             'enlace_compromiso': f'http://{settings.SITE_DOMAIN}/compromisos/{compromiso.id}/' if hasattr(settings, 'SITE_DOMAIN') else '#',
         }
+        print(f"✓ Contexto preparado para el template")
 
         # Renderizar template HTML
+        print(f"🎨 Renderizando template HTML...")
         html_message = render_to_string('emails/compromiso_asignado.html', contexto)
+        print(f"✓ Template renderizado exitosamente ({len(html_message)} caracteres)")
 
         # Enviar email
+        print(f"📤 Enviando email a {usuario_asignado.email}...")
         send_mail(
             subject=f'🔔 Nuevo Compromiso Asignado: {compromiso.descripcion[:50]}...',
             message=f'Hola {contexto["nombre_usuario"]},\n\nSe te ha asignado un nuevo compromiso: {compromiso.descripcion}\n\nFecha de vencimiento: {contexto["fecha_vencimiento"]}',
@@ -51,12 +58,18 @@ def enviar_email_compromiso_asignado(compromiso, usuario_asignado):
             html_message=html_message,
             fail_silently=False,
         )
+        print(f"✓ Email enviado exitosamente a {usuario_asignado.email}")
 
         logger.info(f'Email de compromiso asignado enviado a {usuario_asignado.email} (Compromiso ID: {compromiso.id})')
         return True
 
     except Exception as e:
         logger.error(f'Error al enviar email de compromiso asignado: {str(e)}', exc_info=True)
+        print(f"❌ ERROR al enviar email de compromiso:")
+        print(f"   Tipo: {type(e).__name__}")
+        print(f"   Mensaje: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -75,23 +88,30 @@ def enviar_email_solicitud_firma(acta, usuario):
         # Validar que el usuario tenga email
         if not usuario.email:
             logger.warning(f'Usuario {usuario.username} no tiene email configurado')
+            print(f"⚠️ Usuario {usuario.username} no tiene email configurado")
             return False
+
+        print(f"📧 Preparando email de solicitud de firma para: {usuario.email}")
 
         # Preparar contexto para el template
         contexto = {
             'nombre_usuario': usuario.get_full_name() or usuario.username,
             'titulo_acta': acta.titulo,
-            'fecha_reunion': acta.fecha.strftime('%d/%m/%Y %H:%M'),
-            'lugar': acta.lugar or 'No especificado',
+            'fecha_reunion': acta.fecha_reunion.strftime('%d/%m/%Y %H:%M'),
+            'lugar': acta.lugar_reunion or 'No especificado',
             'creador': acta.creador.get_full_name() or acta.creador.username,
-            'resumen': acta.descripcion[:200] + '...' if len(acta.descripcion) > 200 else acta.descripcion,
+            'resumen': acta.desarrollo[:200] + '...' if len(acta.desarrollo) > 200 else acta.desarrollo,
             'enlace_acta': f'http://{settings.SITE_DOMAIN}/actas/{acta.id}/' if hasattr(settings, 'SITE_DOMAIN') else '#',
         }
+        print(f"✓ Contexto preparado para el template")
 
         # Renderizar template HTML
+        print(f"🎨 Renderizando template HTML...")
         html_message = render_to_string('emails/solicitud_firma.html', contexto)
+        print(f"✓ Template renderizado exitosamente ({len(html_message)} caracteres)")
 
         # Enviar email
+        print(f"📤 Enviando email a {usuario.email}...")
         send_mail(
             subject=f'✍️ Solicitud de Firma: {acta.titulo}',
             message=f'Hola {contexto["nombre_usuario"]},\n\nSe requiere tu firma en el acta: {acta.titulo}\n\nFecha de reunión: {contexto["fecha_reunion"]}',
@@ -100,12 +120,18 @@ def enviar_email_solicitud_firma(acta, usuario):
             html_message=html_message,
             fail_silently=False,
         )
+        print(f"✓ Email enviado exitosamente a {usuario.email}")
 
         logger.info(f'Email de solicitud de firma enviado a {usuario.email} (Acta ID: {acta.id})')
         return True
 
     except Exception as e:
         logger.error(f'Error al enviar email de solicitud de firma: {str(e)}', exc_info=True)
+        print(f"❌ ERROR al enviar email de solicitud de firma:")
+        print(f"   Tipo: {type(e).__name__}")
+        print(f"   Mensaje: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -134,7 +160,7 @@ def enviar_email_acta_firmada_completa(acta):
         contexto = {
             'nombre_usuario': acta.creador.get_full_name() or acta.creador.username,
             'titulo_acta': acta.titulo,
-            'fecha_reunion': acta.fecha.strftime('%d/%m/%Y %H:%M'),
+            'fecha_reunion': acta.fecha_reunion.strftime('%d/%m/%Y %H:%M'),
             'total_participantes': total_participantes,
             'total_firmas': total_firmas,
             'enlace_acta': f'http://{settings.SITE_DOMAIN}/actas/{acta.id}/' if hasattr(settings, 'SITE_DOMAIN') else '#',
@@ -315,7 +341,7 @@ def enviar_email_nuevo_comentario(acta, comentario, autor):
                 contexto = {
                     'nombre_usuario': participante.usuario.get_full_name() or participante.usuario.username,
                     'titulo_acta': acta.titulo,
-                    'fecha_reunion': acta.fecha.strftime('%d/%m/%Y %H:%M'),
+                    'fecha_reunion': acta.fecha_reunion.strftime('%d/%m/%Y %H:%M'),
                     'autor_comentario': autor.get_full_name() or autor.username,
                     'comentario': comentario[:300] + '...' if len(comentario) > 300 else comentario,
                     'fecha_comentario': datetime.now().strftime('%d/%m/%Y %H:%M'),
