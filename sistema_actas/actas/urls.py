@@ -71,4 +71,10 @@ urlpatterns = [
     path('api/admin/backups/descargar/<str:filename>/', api_views.descargar_backup_api, name='api_descargar_backup'),
     path('api/admin/backups/restaurar/', api_views.restaurar_backup_api, name='api_restaurar_backup'),
     path('api/admin/backups/eliminar/<str:filename>/', api_views.eliminar_backup_api, name='api_eliminar_backup'),
+
+    # Archivos adjuntos de actas
+    path('api/actas/<int:acta_id>/adjuntar-archivo/', api_views.adjuntar_archivo_acta_api, name='api_adjuntar_archivo'),
+    path('api/actas/<int:acta_id>/archivos/', api_views.listar_archivos_acta_api, name='api_listar_archivos'),
+    path('api/adjuntos/<int:adjunto_id>/descargar/', api_views.descargar_archivo_adjunto_api, name='api_descargar_adjunto'),
+    path('api/adjuntos/<int:adjunto_id>/', api_views.eliminar_archivo_adjunto_api, name='api_eliminar_adjunto'),
 ]

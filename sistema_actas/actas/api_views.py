@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from django.conf import settings
 from rest_framework.authtoken.models import Token
-from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
+from .models import Acta, Participante, Firma, Compromiso, ComentarioActa, ArchivoAdjunto
 import json
 import logging
 import os
@@ -3667,4 +3667,400 @@ def eliminar_backup_api(request, filename):
         return JsonResponse({
             'success': False,
             'error': f'Error al eliminar backup: {str(e)}'
+        }, status=500)
+
+
+# ============================================================================
+# ENDPOINTS: ARCHIVOS ADJUNTOS PARA ACTAS
+# ============================================================================
+
+@csrf_exempt
+def adjuntar_archivo_acta_api(request, acta_id):
+    """
+    POST /actas/api/actas/<acta_id>/adjuntar-archivo/
+
+    Sube un archivo adjunto a un acta
+
+    Headers:
+        Authorization: Bearer {token}
+        Content-Type: multipart/form-data
+
+    Body (multipart/form-data):
+        archivo: File (requerido) - Archivo a subir
+        descripcion: String (opcional) - Descripción del archivo
+
+    Validaciones:
+    - Tamaño máximo: 10 MB
+    - Tipos permitidos: pdf, doc, docx, xls, xlsx, ppt, pptx, txt, jpg, jpeg, png, gif, zip, rar
+    - Solo creador del acta o admin pueden adjuntar archivos
+
+    Response (éxito):
+        {
+            "success": true,
+            "message": "Archivo adjuntado correctamente",
+            "archivo": {
+                "id": 1,
+                "nombre_original": "documento.pdf",
+                "tipo_archivo": "pdf",
+                "tamaño_bytes": 1048576,
+                "fecha_subida": "2025-12-25T10:30:00",
+                "subido_por": "Juan Pérez",
+                "descripcion": "Presupuesto 2025"
+            }
+        }
+
+    Response (error):
+        {
+            "success": false,
+            "error": "mensaje de error"
+        }
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido. Use POST.'
+        }, status=405)
+
+    try:
+        # Autenticación
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
+        # Verificar que el acta existe
+        try:
+            acta = Acta.objects.get(id=acta_id)
+        except Acta.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Acta no encontrada'
+            }, status=404)
+
+        # Verificar permisos: solo creador o admin pueden adjuntar
+        if acta.creador != user and user.rol != 'admin':
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para adjuntar archivos a esta acta'
+            }, status=403)
+
+        # Verificar que se envió un archivo
+        if 'archivo' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se proporcionó archivo. Use el campo "archivo".'
+            }, status=400)
+
+        archivo = request.FILES['archivo']
+        descripcion = request.POST.get('descripcion', '')
+
+        # Validar tamaño (máximo 10 MB)
+        MAX_SIZE = 10 * 1024 * 1024  # 10 MB en bytes
+        if archivo.size > MAX_SIZE:
+            size_mb = archivo.size / (1024 * 1024)
+            return JsonResponse({
+                'success': False,
+                'error': f'Archivo muy grande ({size_mb:.2f} MB). Tamaño máximo: 10 MB'
+            }, status=400)
+
+        # Validar tipo de archivo
+        extensiones_permitidas = [
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+            'txt', 'jpg', 'jpeg', 'png', 'gif', 'zip', 'rar'
+        ]
+        nombre_archivo = archivo.name
+        extension = nombre_archivo.split('.')[-1].lower() if '.' in nombre_archivo else ''
+
+        if extension not in extensiones_permitidas:
+            return JsonResponse({
+                'success': False,
+                'error': f'Tipo de archivo no permitido. Permitidos: {", ".join(extensiones_permitidas)}'
+            }, status=400)
+
+        # Crear archivo adjunto
+        archivo_adjunto = ArchivoAdjunto.objects.create(
+            acta=acta,
+            archivo=archivo,
+            nombre_original=nombre_archivo,
+            tipo_archivo=extension,
+            tamaño_bytes=archivo.size,
+            subido_por=user,
+            descripcion=descripcion
+        )
+
+        logger.info(
+            f'Archivo {nombre_archivo} adjuntado a acta {acta.numero_acta} '
+            f'por usuario {user.username}'
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Archivo adjuntado correctamente',
+            'archivo': {
+                'id': archivo_adjunto.id,
+                'nombre_original': archivo_adjunto.nombre_original,
+                'tipo_archivo': archivo_adjunto.tipo_archivo,
+                'tamaño_bytes': archivo_adjunto.tamaño_bytes,
+                'tamaño_legible': archivo_adjunto.tamaño_legible,
+                'fecha_subida': archivo_adjunto.fecha_subida.isoformat(),
+                'subido_por': user.get_full_name() or user.email,
+                'descripcion': archivo_adjunto.descripcion
+            }
+        })
+
+    except Exception as e:
+        logger.error(f'Error al adjuntar archivo: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al adjuntar archivo: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def listar_archivos_acta_api(request, acta_id):
+    """
+    GET /actas/api/actas/<acta_id>/archivos/
+
+    Lista todos los archivos adjuntos de un acta
+
+    Headers:
+        Authorization: Bearer {token}
+
+    Response (éxito):
+        {
+            "success": true,
+            "archivos": [
+                {
+                    "id": 1,
+                    "nombre_original": "documento.pdf",
+                    "tipo_archivo": "pdf",
+                    "tamaño_bytes": 1048576,
+                    "tamaño_legible": "1.00 MB",
+                    "fecha_subida": "2025-12-25T10:30:00",
+                    "subido_por": "Juan Pérez",
+                    "descripcion": "Presupuesto 2025"
+                }
+            ],
+            "total": 1
+        }
+
+    Response (error):
+        {
+            "success": false,
+            "error": "mensaje de error"
+        }
+    """
+    if request.method != 'GET':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido. Use GET.'
+        }, status=405)
+
+    try:
+        # Autenticación
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
+        # Verificar que el acta existe
+        try:
+            acta = Acta.objects.get(id=acta_id)
+        except Acta.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Acta no encontrada'
+            }, status=404)
+
+        # Obtener todos los archivos adjuntos del acta
+        archivos = ArchivoAdjunto.objects.filter(acta=acta).select_related('subido_por')
+
+        archivos_data = [
+            {
+                'id': archivo.id,
+                'nombre_original': archivo.nombre_original,
+                'tipo_archivo': archivo.tipo_archivo,
+                'tamaño_bytes': archivo.tamaño_bytes,
+                'tamaño_legible': archivo.tamaño_legible,
+                'fecha_subida': archivo.fecha_subida.isoformat(),
+                'subido_por': (
+                    archivo.subido_por.get_full_name()
+                    if archivo.subido_por and archivo.subido_por.get_full_name()
+                    else archivo.subido_por.email
+                    if archivo.subido_por
+                    else 'Usuario eliminado'
+                ),
+                'descripcion': archivo.descripcion
+            }
+            for archivo in archivos
+        ]
+
+        return JsonResponse({
+            'success': True,
+            'archivos': archivos_data,
+            'total': len(archivos_data)
+        })
+
+    except Exception as e:
+        logger.error(f'Error al listar archivos: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al listar archivos: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def descargar_archivo_adjunto_api(request, adjunto_id):
+    """
+    GET /actas/api/adjuntos/<adjunto_id>/descargar/
+
+    Descarga un archivo adjunto
+
+    Headers:
+        Authorization: Bearer {token}
+
+    Response (éxito):
+        - Retorna el archivo para descarga con header Content-Disposition
+
+    Response (error):
+        {
+            "success": false,
+            "error": "mensaje de error"
+        }
+    """
+    if request.method != 'GET':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido. Use GET.'
+        }, status=405)
+
+    try:
+        # Autenticación
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
+        # Verificar que el archivo existe
+        try:
+            archivo_adjunto = ArchivoAdjunto.objects.select_related('acta').get(id=adjunto_id)
+        except ArchivoAdjunto.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Archivo no encontrado'
+            }, status=404)
+
+        # Verificar que el archivo físico existe
+        if not archivo_adjunto.archivo:
+            return JsonResponse({
+                'success': False,
+                'error': 'Archivo no disponible'
+            }, status=404)
+
+        if not os.path.isfile(archivo_adjunto.archivo.path):
+            logger.error(
+                f'Archivo físico no encontrado: {archivo_adjunto.archivo.path} '
+                f'(ID: {adjunto_id})'
+            )
+            return JsonResponse({
+                'success': False,
+                'error': 'Archivo físico no encontrado en el servidor'
+            }, status=404)
+
+        # Retornar archivo para descarga
+        logger.info(
+            f'Usuario {user.username} descargó archivo {archivo_adjunto.nombre_original} '
+            f'(Acta: {archivo_adjunto.acta.numero_acta})'
+        )
+
+        response = FileResponse(
+            open(archivo_adjunto.archivo.path, 'rb'),
+            content_type='application/octet-stream'
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="{archivo_adjunto.nombre_original}"'
+        )
+        return response
+
+    except Exception as e:
+        logger.error(f'Error al descargar archivo: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al descargar archivo: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def eliminar_archivo_adjunto_api(request, adjunto_id):
+    """
+    DELETE /actas/api/adjuntos/<adjunto_id>/
+
+    Elimina un archivo adjunto
+
+    Headers:
+        Authorization: Bearer {token}
+
+    Permisos:
+    - Solo el creador del acta o administradores pueden eliminar archivos
+
+    Response (éxito):
+        {
+            "success": true,
+            "message": "Archivo eliminado correctamente"
+        }
+
+    Response (error):
+        {
+            "success": false,
+            "error": "mensaje de error"
+        }
+    """
+    if request.method != 'DELETE':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido. Use DELETE.'
+        }, status=405)
+
+    try:
+        # Autenticación
+        user, error_response = get_user_from_token(request)
+        if error_response:
+            return error_response
+
+        # Verificar que el archivo existe
+        try:
+            archivo_adjunto = ArchivoAdjunto.objects.select_related('acta').get(id=adjunto_id)
+        except ArchivoAdjunto.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Archivo no encontrado'
+            }, status=404)
+
+        # Verificar permisos: solo creador del acta o admin pueden eliminar
+        acta = archivo_adjunto.acta
+        if acta.creador != user and user.rol != 'admin':
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para eliminar este archivo'
+            }, status=403)
+
+        # Guardar información para el log
+        nombre_archivo = archivo_adjunto.nombre_original
+        numero_acta = acta.numero_acta
+
+        # Eliminar archivo (el método delete() del modelo se encarga de eliminar el archivo físico)
+        archivo_adjunto.delete()
+
+        logger.info(
+            f'Usuario {user.username} eliminó archivo {nombre_archivo} '
+            f'de acta {numero_acta}'
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Archivo eliminado correctamente'
+        })
+
+    except Exception as e:
+        logger.error(f'Error al eliminar archivo: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al eliminar archivo: {str(e)}'
         }, status=500)

@@ -1,6 +1,6 @@
 from notifications.models import Notification
 from django.contrib import admin
-from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
+from .models import Acta, Participante, Firma, Compromiso, ComentarioActa, ArchivoAdjunto
 
 @admin.register(Acta)
 class ActaAdmin(admin.ModelAdmin):
@@ -30,3 +30,10 @@ class CompromisoAdmin(admin.ModelAdmin):
 class ComentarioActaAdmin(admin.ModelAdmin):
     list_display = ('acta', 'autor', 'fecha')
     search_fields = ('acta__numero_acta', 'autor__email')
+
+@admin.register(ArchivoAdjunto)
+class ArchivoAdjuntoAdmin(admin.ModelAdmin):
+    list_display = ('nombre_original', 'acta', 'tipo_archivo', 'tamaño_legible', 'subido_por', 'fecha_subida')
+    list_filter = ('tipo_archivo', 'fecha_subida')
+    search_fields = ('nombre_original', 'acta__numero_acta', 'subido_por__email', 'descripcion')
+    readonly_fields = ('tamaño_bytes', 'fecha_subida')

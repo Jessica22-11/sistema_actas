@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta, datetime, date
 import uuid
+import os
+from django.conf import settings
 from accounts.models import User
 
 User = get_user_model()
@@ -345,6 +347,91 @@ class ComentarioActa(models.Model):
         indexes = [
             models.Index(fields=['acta', 'fecha']),
         ]
-    
+
     def __str__(self):
         return f"Comentario de {self.autor.get_full_name()} en {self.acta.numero_acta}"
+
+
+class ArchivoAdjunto(models.Model):
+    """
+    Archivos adjuntos de las actas (permite múltiples archivos por acta)
+
+    Este modelo complementa el campo 'archivo_adjunto' existente en Acta,
+    permitiendo adjuntar múltiples archivos a una misma acta con metadata completa.
+    """
+    acta = models.ForeignKey(
+        'Acta',
+        on_delete=models.CASCADE,
+        related_name='archivos_adjuntos',
+        help_text='Acta a la que pertenece el archivo'
+    )
+
+    archivo = models.FileField(
+        upload_to='actas/adjuntos/%Y/%m/',
+        help_text='Archivo adjunto'
+    )
+
+    nombre_original = models.CharField(
+        max_length=255,
+        help_text='Nombre original del archivo'
+    )
+
+    tipo_archivo = models.CharField(
+        max_length=100,
+        help_text='Extensión: pdf, docx, xlsx, jpg, png, zip, etc.'
+    )
+
+    tamaño_bytes = models.BigIntegerField(
+        help_text='Tamaño del archivo en bytes'
+    )
+
+    subido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='archivos_subidos',
+        help_text='Usuario que subió el archivo'
+    )
+
+    fecha_subida = models.DateTimeField(
+        auto_now_add=True,
+        help_text='Fecha y hora de subida'
+    )
+
+    descripcion = models.TextField(
+        blank=True,
+        help_text='Descripción opcional del archivo'
+    )
+
+    class Meta:
+        ordering = ['-fecha_subida']
+        verbose_name = 'Archivo Adjunto'
+        verbose_name_plural = 'Archivos Adjuntos'
+        indexes = [
+            models.Index(fields=['acta', 'fecha_subida']),
+        ]
+
+    def __str__(self):
+        return f"{self.nombre_original} - Acta {self.acta.numero_acta}"
+
+    def delete(self, *args, **kwargs):
+        """Eliminar archivo físico al eliminar registro"""
+        if self.archivo and os.path.isfile(self.archivo.path):
+            try:
+                os.remove(self.archivo.path)
+            except Exception as e:
+                # Log el error pero continuar con la eliminación del registro
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f'Error al eliminar archivo físico: {str(e)}')
+        super().delete(*args, **kwargs)
+
+    @property
+    def tamaño_legible(self):
+        """Retorna el tamaño en formato legible (KB, MB)"""
+        if self.tamaño_bytes < 1024:
+            return f"{self.tamaño_bytes} B"
+        elif self.tamaño_bytes < 1024 * 1024:
+            return f"{self.tamaño_bytes / 1024:.2f} KB"
+        else:
+            return f"{self.tamaño_bytes / (1024 * 1024):.2f} MB"
