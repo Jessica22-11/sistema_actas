@@ -2,3 +2,47 @@
 # Archivos temporales de Windows
 nul
 sistema_actas/nul
+
+# Archivos de prueba temporales
+test_*.py
+!sistema_actas/**/test_*.py
+tests/
+
+# Documentación temporal
+ARCHIVOS_ADJUNTOS_API.md
+ARCHIVOS_ADJUNTOS_IMPLEMENTACION.md
+
+# Backups personales
+sistema_actas/backups/backup_personal_*.zip
+
+# Archivos de configuración local
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Base de datos local
+*.sqlite3
+db.sqlite3
+
+# Media files (archivos subidos)
+media/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
