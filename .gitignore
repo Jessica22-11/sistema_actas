@@ -266,3 +266,16 @@ media/
 *.swp
 *.swo
 *~
+
+# Archivos de prueba temporales
+API_VERIFICACION_EMAIL_FLUTTER.md
+GUIA_PRUEBAS_COMPLETA.md
+PROMPT_CORTO_FLUTTER.md
+PROMPT_FLUTTER_VERIFICACION.md
+SOLUCION_FLUTTER.md
+test_envio_email_real.py
+VERIFICACION_SISTEMA_EMAIL_COMPLETA.md
+verificar_sistema_emails.py
+
+*.txt
+tmpclaude-*

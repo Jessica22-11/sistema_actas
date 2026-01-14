@@ -225,7 +225,15 @@ SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_TRUSTED_ORIGINS = ["https://localhost:8000", "http://127.0.0.1:8000"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://localhost:8000", 
+    "http://127.0.0.1:8000",
+    "https://*.ngrok.io",           # URLs antiguas de ngrok
+    "https://*.ngrok-free.app",     # URLs nuevas de ngrok (desde 2023)
+    "https://*.ngrok.app", 
+    "https://*.ngrok-free.dev"# Variante adicional
+]
+
 
 # Logging
 LOGGING = {

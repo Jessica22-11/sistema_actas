@@ -1178,12 +1178,102 @@ def crear_acta_api(request):
             except User.DoesNotExist:
                 continue
 
+        # Procesar compromisos si vienen en el request
+        compromisos_data = data.get('compromisos', [])
+        compromisos_creados = []
+
+        if compromisos_data and isinstance(compromisos_data, list):
+            logger.info(f'Procesando {len(compromisos_data)} compromisos para acta {acta.numero_acta}')
+
+            for comp_data in compromisos_data:
+                try:
+                    # Extraer datos del compromiso
+                    descripcion = comp_data.get('descripcion', '').strip()
+                    responsable_id = comp_data.get('responsable_id') or comp_data.get('responsable')
+                    fecha_limite = comp_data.get('fecha_limite')
+
+                    # Validar campos requeridos
+                    if not descripcion:
+                        logger.warning('Compromiso sin descripción, saltando...')
+                        continue
+
+                    if not responsable_id:
+                        logger.warning('Compromiso sin responsable, saltando...')
+                        continue
+
+                    # Obtener usuario responsable
+                    try:
+                        if isinstance(responsable_id, int):
+                            responsable = User.objects.get(id=responsable_id)
+                        else:
+                            # Puede ser email
+                            responsable = User.objects.get(email=responsable_id)
+                    except User.DoesNotExist:
+                        logger.error(f'Usuario responsable no encontrado: {responsable_id}')
+                        continue
+
+                    # Parsear fecha_limite
+                    if isinstance(fecha_limite, str):
+                        try:
+                            # Formato esperado: "YYYY-MM-DD" o "YYYY-MM-DD HH:MM:SS"
+                            if 'T' in fecha_limite or ' ' in fecha_limite:
+                                fecha_obj = datetime.fromisoformat(fecha_limite.replace('Z', ''))
+                                fecha_limite_date = fecha_obj.date()
+                            else:
+                                fecha_obj = datetime.strptime(fecha_limite, '%Y-%m-%d')
+                                fecha_limite_date = fecha_obj.date()
+                        except Exception as e:
+                            logger.warning(f'Error parseando fecha límite "{fecha_limite}": {str(e)}')
+                            # Usar fecha por defecto (5 días desde ahora)
+                            fecha_limite_date = datetime.now().date() + timedelta(days=5)
+                    else:
+                        # Si no es string, usar valor por defecto
+                        fecha_limite_date = datetime.now().date() + timedelta(days=5)
+
+                    # Crear compromiso
+                    compromiso = Compromiso.objects.create(
+                        acta=acta,
+                        descripcion=descripcion,
+                        responsable=responsable,
+                        fecha_limite=fecha_limite_date,
+                        estado='pendiente'
+                    )
+
+                    compromisos_creados.append({
+                        'id': compromiso.id,
+                        'descripcion': compromiso.descripcion,
+                        'responsable': compromiso.responsable.get_full_name() or compromiso.responsable.email,
+                        'responsable_id': compromiso.responsable.id,
+                        'fecha_limite': compromiso.fecha_limite.isoformat() if compromiso.fecha_limite else None,
+                        'estado': compromiso.estado
+                    })
+
+                    logger.info(f'Compromiso creado: {compromiso.descripcion[:50]}...')
+
+                    # Opcional: Enviar email de notificación
+                    try:
+                        from .email_service import enviar_email_compromiso_asignado
+                        enviar_email_compromiso_asignado(compromiso, responsable)
+                    except Exception as e:
+                        logger.warning(f'Error enviando email de compromiso: {str(e)}')
+
+                except Exception as e:
+                    logger.error(f'Error creando compromiso: {str(e)}', exc_info=True)
+                    continue
+
+            logger.info(f'{len(compromisos_creados)} compromisos creados exitosamente para acta {acta.numero_acta}')
+
         return JsonResponse({
             'success': True,
             'message': 'Acta creada correctamente',
             'data': {
                 'acta_id': acta.id,
                 'numero_acta': acta.numero_acta,
+                'titulo': acta.titulo,
+                'estado': acta.estado,
+                'fecha_reunion': acta.fecha_reunion.isoformat() if hasattr(acta.fecha_reunion, 'isoformat') else str(acta.fecha_reunion),
+                'compromisos_creados': compromisos_creados,
+                'total_compromisos': len(compromisos_creados),
             }
         })
 
@@ -1522,7 +1612,52 @@ def cambiar_estado_acta_api(request, acta_id):
         estado_anterior = acta.estado
         acta.estado = nuevo_estado
         acta.save()
-        
+
+        # Si cambia a 'en_revision', enviar notificaciones por email
+        if nuevo_estado == 'en_revision':
+            from notifications.models import Notification
+
+            # Establecer fecha límite para firmas
+            acta.fecha_limite_firmas = timezone.now() + timedelta(days=acta.aplicar_silencio_dias)
+            acta.save()
+
+            # Obtener todos los participantes
+            participantes = acta.participantes.all()
+
+            participantes_notificados = 0
+            # Para cada participante, crear/recuperar firma y enviar email
+            for participante in participantes:
+                # Crear o recuperar objeto Firma
+                firma, created = Firma.objects.get_or_create(
+                    acta=acta,
+                    usuario=participante.usuario,
+                    defaults={'firmado': False}
+                )
+
+                # Crear notificación
+                try:
+                    Notification.objects.create(
+                        usuario=participante.usuario,
+                        tipo='firma_pendiente',
+                        titulo='📝 Nueva acta pendiente de firma',
+                        mensaje=f"Tienes pendiente firmar el acta '{acta.numero_acta} - {acta.titulo}'. Fecha límite: {acta.fecha_limite_firmas.strftime('%d/%m/%Y')}",
+                        enlace=f'/actas/{acta.id}/',
+                    )
+                except Exception as e:
+                    logger.warning(f'Error creando notificación para {participante.usuario.email}: {str(e)}')
+
+                # Enviar email
+                try:
+                    from .email_service import enviar_email_solicitud_firma
+                    resultado = enviar_email_solicitud_firma(acta, participante.usuario)
+                    if resultado:
+                        participantes_notificados += 1
+                        logger.info(f'Email enviado a {participante.usuario.email}')
+                except Exception as e:
+                    logger.warning(f'Error enviando email a {participante.usuario.email}: {str(e)}')
+
+            logger.info(f'Notificaciones enviadas para acta {acta.numero_acta}: {participantes_notificados} participantes')
+
         return JsonResponse({
             'success': True,
             'message': f'Estado cambiado de {estado_anterior} a {nuevo_estado}',

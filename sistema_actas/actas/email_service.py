@@ -7,9 +7,63 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
 import logging
-from datetime import datetime
+from datetime import datetime, date
+from django.utils import timezone
 
 logger = logging.getLogger('actas.email_service')
+
+
+def format_datetime_safe(value, format_str='%d/%m/%Y %H:%M'):
+    """
+    Formatea un datetime/date o string de forma segura
+
+    Args:
+        value: datetime, date o string ISO
+        format_str: formato de salida
+
+    Returns:
+        string formateado o el valor original si falla
+    """
+    if value is None:
+        return 'No especificado'
+
+    # Si ya es datetime o date, formatear directamente
+    if isinstance(value, datetime):
+        try:
+            return value.strftime(format_str)
+        except:
+            return str(value)
+
+    if isinstance(value, date):
+        try:
+            # Para dates, usar formato sin hora
+            if '%H' in format_str or '%M' in format_str:
+                format_str = '%d/%m/%Y'
+            return value.strftime(format_str)
+        except:
+            return str(value)
+
+    # Si es string, intentar parsearlo
+    if isinstance(value, str):
+        try:
+            # Intentar parsear como ISO datetime
+            dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt)
+            return dt.strftime(format_str)
+        except:
+            try:
+                # Intentar parsear como fecha YYYY-MM-DD
+                d = datetime.strptime(value, '%Y-%m-%d').date()
+                if '%H' in format_str or '%M' in format_str:
+                    format_str = '%d/%m/%Y'
+                return d.strftime(format_str)
+            except:
+                # Si falla todo, devolver el string original
+                return value
+
+    # Fallback: convertir a string
+    return str(value)
 
 
 def enviar_email_compromiso_asignado(compromiso, usuario_asignado):
@@ -37,7 +91,7 @@ def enviar_email_compromiso_asignado(compromiso, usuario_asignado):
             'nombre_usuario': usuario_asignado.get_full_name() or usuario_asignado.username,
             'titulo_compromiso': compromiso.descripcion,
             'descripcion': compromiso.descripcion,
-            'fecha_vencimiento': compromiso.fecha_limite.strftime('%d/%m/%Y') if compromiso.fecha_limite else 'No definida',
+            'fecha_vencimiento': format_datetime_safe(compromiso.fecha_limite, '%d/%m/%Y') if compromiso.fecha_limite else 'No definida',
             'creador': compromiso.acta.creador.get_full_name() if compromiso.acta else 'Sistema',
             'enlace_compromiso': f'http://{settings.SITE_DOMAIN}/compromisos/{compromiso.id}/' if hasattr(settings, 'SITE_DOMAIN') else '#',
         }
@@ -97,7 +151,7 @@ def enviar_email_solicitud_firma(acta, usuario):
         contexto = {
             'nombre_usuario': usuario.get_full_name() or usuario.username,
             'titulo_acta': acta.titulo,
-            'fecha_reunion': acta.fecha_reunion.strftime('%d/%m/%Y %H:%M'),
+            'fecha_reunion': format_datetime_safe(acta.fecha_reunion, '%d/%m/%Y %H:%M'),
             'lugar': acta.lugar_reunion or 'No especificado',
             'creador': acta.creador.get_full_name() or acta.creador.username,
             'resumen': acta.desarrollo[:200] + '...' if len(acta.desarrollo) > 200 else acta.desarrollo,
@@ -160,7 +214,7 @@ def enviar_email_acta_firmada_completa(acta):
         contexto = {
             'nombre_usuario': acta.creador.get_full_name() or acta.creador.username,
             'titulo_acta': acta.titulo,
-            'fecha_reunion': acta.fecha_reunion.strftime('%d/%m/%Y %H:%M'),
+            'fecha_reunion': format_datetime_safe(acta.fecha_reunion, '%d/%m/%Y %H:%M'),
             'total_participantes': total_participantes,
             'total_firmas': total_firmas,
             'enlace_acta': f'http://{settings.SITE_DOMAIN}/actas/{acta.id}/' if hasattr(settings, 'SITE_DOMAIN') else '#',
@@ -221,7 +275,7 @@ def enviar_email_recordatorio_compromiso(compromiso):
             'nombre_usuario': compromiso.responsable.get_full_name() or compromiso.responsable.username,
             'titulo_compromiso': compromiso.descripcion,
             'descripcion': compromiso.descripcion,
-            'fecha_vencimiento': compromiso.fecha_limite.strftime('%d/%m/%Y') if compromiso.fecha_limite else 'No definida',
+            'fecha_vencimiento': format_datetime_safe(compromiso.fecha_limite, '%d/%m/%Y') if compromiso.fecha_limite else 'No definida',
             'tiempo_restante': tiempo_restante,
             'estado': compromiso.get_estado_display() if hasattr(compromiso, 'get_estado_display') else compromiso.estado,
             'enlace_compromiso': f'http://{settings.SITE_DOMAIN}/compromisos/{compromiso.id}/' if hasattr(settings, 'SITE_DOMAIN') else '#',
@@ -283,7 +337,7 @@ def enviar_email_compromiso_actualizado(compromiso, estado_anterior, actualizado
             'descripcion': compromiso.descripcion,
             'estado_anterior': estado_anterior,
             'estado_nuevo': estado_nuevo,
-            'fecha_vencimiento': compromiso.fecha_limite.strftime('%d/%m/%Y') if compromiso.fecha_limite else 'No definida',
+            'fecha_vencimiento': format_datetime_safe(compromiso.fecha_limite, '%d/%m/%Y') if compromiso.fecha_limite else 'No definida',
             'actualizador': actualizador.get_full_name() or actualizador.username,
             'mensaje_adicional': mensaje_adicional,
             'enlace_compromiso': f'http://{settings.SITE_DOMAIN}/compromisos/{compromiso.id}/' if hasattr(settings, 'SITE_DOMAIN') else '#',
@@ -341,7 +395,7 @@ def enviar_email_nuevo_comentario(acta, comentario, autor):
                 contexto = {
                     'nombre_usuario': participante.usuario.get_full_name() or participante.usuario.username,
                     'titulo_acta': acta.titulo,
-                    'fecha_reunion': acta.fecha_reunion.strftime('%d/%m/%Y %H:%M'),
+                    'fecha_reunion': format_datetime_safe(acta.fecha_reunion, '%d/%m/%Y %H:%M'),
                     'autor_comentario': autor.get_full_name() or autor.username,
                     'comentario': comentario[:300] + '...' if len(comentario) > 300 else comentario,
                     'fecha_comentario': datetime.now().strftime('%d/%m/%Y %H:%M'),
