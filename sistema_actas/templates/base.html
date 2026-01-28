@@ -975,13 +975,58 @@
     {% if user.is_authenticated %}
     <div class="sidebar-overlay"></div>
     <aside class="sidebar">
-        {% if user.rol != "aprendiz" %}
+        {% if user.rol == "invitado" %}
+            <!-- MENÚ PARA INVITADOS (puede ver actas pero no crear) -->
             <h6>Menú Principal</h6>
             <nav class="nav flex-column">
                 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
                     <i class="fas fa-home"></i>Inicio
                 </a>
-                <a class="nav-link {% if request.resolver_match.url_name == 'accounts:profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">
+                <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">
+                    <i class="fas fa-user"></i>Mi Perfil
+                </a>
+                <a class="nav-link" href="{% url 'actas:actas_list' %}">
+                    <i class="fas fa-file-alt"></i>Mis Actas
+                </a>
+                <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
+                    <i class="fas fa-signature"></i>Firmas Pendientes
+                </a>
+                <a class="nav-link" href="{% url 'actas:mis_compromisos' %}">
+                    <i class="fas fa-tasks"></i>Mis Compromisos
+                </a>
+            </nav>
+            <div class="alert alert-info mx-3 mt-3" style="font-size: 0.85rem;">
+                <i class="fas fa-info-circle me-1"></i>
+                <strong>Cuenta de Invitado</strong><br>
+                Tu cuenta puede ver actas, pero no crear nuevas. Para crear actas, usa un correo @sena.edu.co o @soy.sena.edu.co
+            </div>
+
+        {% elif user.rol == "aprendiz" %}
+            <!-- MENÚ EXCLUSIVO DE APRENDIZ -->
+            <h6>Zona del Aprendiz</h6>
+            <nav class="nav flex-column">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
+                    <i class="fas fa-home"></i>Inicio
+                </a>
+                <a class="nav-link" href="{% url 'actas:aprendiz_pendientes' %}">
+                    <i class="fas fa-file-signature"></i>Actas Pendientes
+                </a>
+                <a class="nav-link" href="{% url 'actas:aprendiz_compromisos' %}">
+                    <i class="fas fa-list-check"></i>Mis Compromisos
+                </a>
+                <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
+                    <i class="fas fa-signature"></i>Firmas Pendientes
+                </a>
+            </nav>
+
+        {% else %}
+            <!-- MENÚ PARA FUNCIONARIOS, INSTRUCTORES, COORDINADORES, DIRECTORES, ADMIN -->
+            <h6>Menú Principal</h6>
+            <nav class="nav flex-column">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
+                    <i class="fas fa-home"></i>Inicio
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">
                     <i class="fas fa-user"></i>Mi Perfil
                 </a>
                 <a class="nav-link" href="{% url 'actas:actas_list' %}">
@@ -1015,24 +1060,6 @@
                 </a>
                 {% endif %}
             </nav>
-
-        {% else %}
-            <!-- MENÚ EXCLUSIVO DE APRENDIZ -->
-            <h6>Zona del Aprendiz</h6>
-            <nav class="nav flex-column">
-                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
-                    <i class="fas fa-home"></i>Inicio
-                </a>
-                <a class="nav-link" href="{% url 'actas:aprendiz_pendientes' %}">
-                    <i class="fas fa-file-signature"></i>Actas Pendientes
-                </a>
-                <a class="nav-link" href="{% url 'actas:aprendiz_compromisos' %}">
-                    <i class="fas fa-list-check"></i>Mis Compromisos
-                </a>
-                <a class="nav-link" href="{% url 'actas:firmas_pendientes' %}">
-                    <i class="fas fa-signature"></i>Firmas Pendientes
-                </a>
-            </nav>
         {% endif %}
     </aside>
     {% endif %}
@@ -1058,7 +1085,7 @@
         <div class="footer-content">
             <p class="footer-text">
                 <i class="fas fa-file-alt"></i>
-                Sistema de Gestión de Actas - Centro Minero SENA © 2025
+                Sistema de Gestión de Actas - Centro Minero SENA © 2026
             </p>
             <div class="footer-links">
                 <a href="#" target="_blank">Portal SENA</a>

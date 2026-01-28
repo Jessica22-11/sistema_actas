@@ -1,9 +1,10 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.utils import timezone
-from datetime import timedelta, datetime
 from django.conf import settings
+from django.db.models import Q, Count, Prefetch
+from datetime import timedelta, datetime
 from rest_framework.authtoken.models import Token
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa, ArchivoAdjunto
 import json
@@ -11,7 +12,6 @@ import logging
 import os
 import zipfile
 import tempfile
-from django.http import FileResponse
 
 
 User = get_user_model()
@@ -30,6 +30,7 @@ def handle_error(e, custom_message="Error procesando la solicitud"):
 def get_user_from_token(request):
     """
     Helper para autenticar al usuario usando el token del header Authorization.
+    Incluye verificación de expiración de token (24 horas por defecto).
 
     Retorna:
         - (user, None) si el token es válido
@@ -59,6 +60,20 @@ def get_user_from_token(request):
 
     try:
         token = Token.objects.select_related('user').get(key=token_key)
+
+        # Verificar expiración del token (24 horas por defecto)
+        token_lifetime = getattr(settings, 'TOKEN_EXPIRATION_HOURS', 24)
+        token_age = timezone.now() - token.created
+
+        if token_age > timedelta(hours=token_lifetime):
+            # Token expirado - eliminarlo
+            token.delete()
+            return None, JsonResponse({
+                'success': False,
+                'error': 'Token expirado. Por favor inicia sesión nuevamente.',
+                'codigo_error': 'TOKEN_EXPIRADO'
+            }, status=401)
+
         return token.user, None
     except Token.DoesNotExist:
         return None, JsonResponse({
@@ -126,13 +141,21 @@ def login_api(request):
                         'error': 'Tu cuenta ha sido desactivada. Contacta al administrador'
                     }, status=403)
 
-                # Obtener o crear token para el usuario
-                token, created = Token.objects.get_or_create(user=user)
+                # Eliminar token anterior si existe y crear uno nuevo
+                # Esto garantiza un token fresco con fecha de creación actualizada
+                Token.objects.filter(user=user).delete()
+                token = Token.objects.create(user=user)
+
+                # Calcular expiración del token para informar al cliente
+                token_lifetime = getattr(settings, 'TOKEN_EXPIRATION_HOURS', 24)
+                expires_at = timezone.now() + timedelta(hours=token_lifetime)
 
                 # Login exitoso
                 return JsonResponse({
                     'success': True,
                     'token': token.key,  # Token seguro de 40 caracteres
+                    'expires_at': expires_at.isoformat(),
+                    'expires_in_hours': token_lifetime,
                     'user': {
                         'id': user.id,
                         'username': user.username,
@@ -689,8 +712,18 @@ def actas_list_api(request):
             page = 1
             limit = 20
 
-        # Query base - actas creadas por el usuario
-        actas = Acta.objects.filter(creador=user)
+        # Query base - actas creadas por el usuario O donde es participante
+        # Optimizado con select_related y prefetch_related para evitar N+1 queries
+        actas = Acta.objects.filter(
+            Q(creador=user) |  # Actas que creó
+            Q(participantes__usuario=user)  # Actas donde es participante
+        ).select_related(
+            'creador'  # Evita N+1 en acceso a creador
+        ).prefetch_related(
+            'participantes',  # Prefetch participantes
+            'participantes__usuario',  # Prefetch usuarios de participantes
+            Prefetch('firmas', queryset=Firma.objects.select_related('usuario')),  # Prefetch firmas con usuario
+        ).distinct()
 
         # Aplicar filtro de estado
         if estado and estado != 'todos':
@@ -698,7 +731,6 @@ def actas_list_api(request):
 
         # Aplicar búsqueda
         if search:
-            from django.db.models import Q
             actas = actas.filter(
                 Q(titulo__icontains=search) |
                 Q(numero_acta__icontains=search)
@@ -713,7 +745,7 @@ def actas_list_api(request):
         # Aplicar paginación
         start = (page - 1) * limit
         end = start + limit
-        actas_paginadas = actas[start:end]
+        actas_paginadas = list(actas[start:end])  # Ejecutar query una sola vez
 
         # Serializar datos
         actas_data = []
@@ -722,6 +754,11 @@ def actas_list_api(request):
             total_firmas = acta.participantes.count()
             firmas_completadas = acta.firmas.filter(firmado=True).count()
             porcentaje_firmas = (firmas_completadas / total_firmas * 100) if total_firmas > 0 else 0
+
+            # Verificar rol del usuario en esta acta
+            es_creador = acta.creador == user
+            es_participante = acta.participantes.filter(usuario=user).exists()
+            tiene_firma_pendiente = acta.firmas.filter(usuario=user, firmado=False).exists()
 
             actas_data.append({
                 'id': acta.id,
@@ -737,6 +774,11 @@ def actas_list_api(request):
                 'creador': {
                     'id': acta.creador.id,
                     'nombre_completo': acta.creador.get_full_name(),
+                },
+                'usuario_rol': {
+                    'es_creador': es_creador,
+                    'es_participante': es_participante,
+                    'tiene_firma_pendiente': tiene_firma_pendiente,
                 },
                 'estadisticas_firmas': {
                     'total': total_firmas,
@@ -1120,9 +1162,28 @@ def crear_acta_api(request):
         if error_response:
             return error_response
 
+        # Validación de permisos: solo funcionarios, coordinadores, directores y administradores pueden crear actas
+        roles_permitidos = ['funcionario', 'coordinador', 'director', 'admin']
+
+        rol_usuario = user.rol.lower() if user.rol else 'invitado'
+
+        if rol_usuario not in roles_permitidos:
+            logger.warning(
+                f'Usuario {user.email} (rol: {rol_usuario}) intentó crear acta sin permisos'
+            )
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para crear actas. Solo funcionarios, coordinadores, directores y administradores pueden crear actas.',
+                'codigo_error': 'PERMISOS_INSUFICIENTES',
+                'rol_requerido': roles_permitidos,
+                'rol_actual': rol_usuario
+            }, status=403)
+
+        logger.info(f'Usuario {user.email} (rol: {rol_usuario}) creando acta...')
+
         # Obtener datos del request
         data = json.loads(request.body)
-        
+
         # Validar campos requeridos
         required_fields = ['titulo', 'fecha_reunion', 'lugar_reunion', 'tipo_reunion', 'modalidad']
         for field in required_fields:

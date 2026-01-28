@@ -1,14 +1,120 @@
 """
 Utilidades para el módulo de actas
-Incluye funciones para detección de roles, generación de códigos y envío de emails
+Incluye funciones para detección de roles, generación de códigos, envío de emails y sanitización
 """
 
 import random
 import string
+import re
+import html
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+
+# Intentar importar bleach, si no está disponible usar sanitización básica
+try:
+    import bleach
+    BLEACH_AVAILABLE = True
+except ImportError:
+    BLEACH_AVAILABLE = False
+
+
+# =============================================================================
+# SANITIZACIÓN DE HTML
+# =============================================================================
+
+# Tags HTML permitidos (para campos de texto enriquecido)
+ALLOWED_TAGS = [
+    'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code',
+    'a', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+]
+
+# Atributos permitidos
+ALLOWED_ATTRIBUTES = {
+    'a': ['href', 'title', 'target'],
+    'span': ['class'],
+    'div': ['class'],
+    'table': ['class', 'border'],
+    'td': ['colspan', 'rowspan'],
+    'th': ['colspan', 'rowspan'],
+}
+
+
+def sanitizar_html(texto):
+    """
+    Sanitiza HTML para prevenir XSS.
+    Permite solo tags y atributos seguros.
+
+    Args:
+        texto (str): Texto con posible HTML
+
+    Returns:
+        str: Texto sanitizado
+    """
+    if not texto:
+        return texto
+
+    if BLEACH_AVAILABLE:
+        # Usar bleach para sanitización robusta
+        return bleach.clean(
+            texto,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            strip=True
+        )
+    else:
+        # Sanitización básica si bleach no está disponible
+        return sanitizar_html_basico(texto)
+
+
+def sanitizar_html_basico(texto):
+    """
+    Sanitización básica de HTML sin bleach.
+    Elimina scripts y eventos JavaScript.
+    """
+    if not texto:
+        return texto
+
+    # Eliminar tags de script
+    texto = re.sub(r'<script[^>]*>.*?</script>', '', texto, flags=re.IGNORECASE | re.DOTALL)
+
+    # Eliminar atributos de eventos (onclick, onerror, etc.)
+    texto = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'\s+on\w+\s*=\s*\S+', '', texto, flags=re.IGNORECASE)
+
+    # Eliminar javascript: en href/src
+    texto = re.sub(r'(href|src)\s*=\s*["\']?\s*javascript:', r'\1=""', texto, flags=re.IGNORECASE)
+
+    # Eliminar data: URLs peligrosas
+    texto = re.sub(r'(href|src)\s*=\s*["\']?\s*data:', r'\1=""', texto, flags=re.IGNORECASE)
+
+    # Eliminar tags style con contenido peligroso
+    texto = re.sub(r'<style[^>]*>.*?</style>', '', texto, flags=re.IGNORECASE | re.DOTALL)
+
+    # Eliminar expression() en estilos (IE)
+    texto = re.sub(r'expression\s*\(', '', texto, flags=re.IGNORECASE)
+
+    return texto
+
+
+def sanitizar_texto_plano(texto):
+    """
+    Convierte texto a texto plano seguro (sin HTML).
+    Útil para campos que no deben tener HTML.
+
+    Args:
+        texto (str): Texto con posible HTML
+
+    Returns:
+        str: Texto plano escapado
+    """
+    if not texto:
+        return texto
+
+    # Escapar todos los caracteres HTML
+    return html.escape(str(texto))
 
 
 def detectar_rol_por_email(email):
@@ -19,13 +125,13 @@ def detectar_rol_por_email(email):
         email (str): Email del usuario
 
     Returns:
-        str: Rol detectado ('aprendiz', 'instructor', o 'invitado')
+        str: Rol detectado ('aprendiz', 'funcionario', o 'invitado')
 
     Ejemplos:
         >>> detectar_rol_por_email('juan@soy.sena.edu.co')
         'aprendiz'
         >>> detectar_rol_por_email('maria@sena.edu.co')
-        'instructor'
+        'funcionario'
         >>> detectar_rol_por_email('carlos@gmail.com')
         'invitado'
     """
@@ -34,7 +140,7 @@ def detectar_rol_por_email(email):
     if email.endswith('@soy.sena.edu.co'):
         return 'aprendiz'
     elif email.endswith('@sena.edu.co'):
-        return 'instructor'
+        return 'funcionario'
     else:
         # Cualquier otro dominio (gmail, hotmail, etc.) es invitado
         return 'invitado'
@@ -63,7 +169,7 @@ def enviar_email_verificacion(user, codigo):
 
     Args:
         user: Instancia del modelo User
-        codigo (str): Código de verificación de 6 dígitos
+        codigo (str): Código de verificación de 8 dígitos
 
     Returns:
         bool: True si el email se envió exitosamente, False en caso contrario

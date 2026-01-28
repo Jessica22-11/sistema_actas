@@ -12,13 +12,20 @@
 }
 
 /* === Fondo general === */
-html, body {
+html {
     height: 100%;
     margin: 0;
     padding: 0;
+}
+
+body {
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    padding-bottom: 70px;
     background: linear-gradient(to top, #e9ecef, #ffffff);
     background-attachment: fixed;
-    padding-bottom: 70px;
+    overflow-y: auto; /* Permite scroll vertical */
 }
 
 /* Contenedor principal centrado */
@@ -33,7 +40,7 @@ html, body {
 .login-card {
     width: 100%;
     max-width: 700px;
-    margin: -25px auto; /* ⬅️ Asegura que quede centrada dentro de su columna */
+    margin: 0 auto; /* Centrado sin margin negativo */
     background: rgba(255, 255, 255, 0.96);
     border-radius: 16px;
     box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
@@ -185,6 +192,36 @@ html, body {
                     </div>
 
                     <div class="login-form">
+                        <!-- Mensajes de error del servidor -->
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Errores del formulario Django -->
+                        {% if form.errors %}
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert" id="django-errors">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Por favor corrija los siguientes errores:</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for field in form %}
+                                        {% for error in field.errors %}
+                                            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endif %}
+
                         <!-- Indicador de pasos -->
                         <div class="register-steps">
                             <div class="step active" data-step="1">
@@ -205,24 +242,32 @@ html, body {
                             </div>
                         </div>
 
-                        <form method="post" enctype="multipart/form-data" id="registerForm">
+                        <form method="post" enctype="multipart/form-data" id="registerForm" autocomplete="off">
                             {% csrf_token %}
-                            
+
                             <!-- Paso 1: Información Personal -->
                             <div class="form-step active" id="step-1">
                                 <h5 class="mb-3">Información Personal</h5>
-                                
+
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-floating mb-3">
-                                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                            <input type="text" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
+                                                   id="first_name" name="first_name"
+                                                   value="{{ form.first_name.value|default:'' }}"
+                                                   autocomplete="off" data-lpignore="true" required>
                                             <label for="first_name">Nombres</label>
+                                            <div class="invalid-feedback">{% if form.first_name.errors %}{{ form.first_name.errors.0 }}{% else %}Por favor ingrese su nombre{% endif %}</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating mb-3">
-                                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                            <input type="text" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
+                                                   id="last_name" name="last_name"
+                                                   value="{{ form.last_name.value|default:'' }}"
+                                                   autocomplete="off" data-lpignore="true" required>
                                             <label for="last_name">Apellidos</label>
+                                            <div class="invalid-feedback">{% if form.last_name.errors %}{{ form.last_name.errors.0 }}{% else %}Por favor ingrese sus apellidos{% endif %}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -230,11 +275,15 @@ html, body {
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="form-floating mb-3">
-                                            <input type="tel" class="form-control" id="telefono" name="telefono"
+                                            <input type="tel" class="form-control {% if form.telefono.errors %}is-invalid{% endif %}"
+                                                   id="telefono" name="telefono"
+                                                   value="{{ form.telefono.value|default:'' }}"
                                                    pattern="[0-9]{10}" maxlength="10"
                                                    placeholder="3001234567"
+                                                   autocomplete="off" data-lpignore="true"
                                                    title="Debe ser un número de 10 dígitos">
                                             <label for="telefono">Teléfono (opcional - 10 dígitos)</label>
+                                            <div class="invalid-feedback">{% if form.telefono.errors %}{{ form.telefono.errors.0 }}{% else %}El teléfono debe tener 10 dígitos{% endif %}</div>
                                         </div>
                                         <small class="text-muted">Ejemplo: 3001234567</small>
                                     </div>
@@ -260,34 +309,44 @@ html, body {
                             <!-- Paso 2: Credenciales -->
                             <div class="form-step" id="step-2">
                                 <h5 class="mb-3">Credenciales de Acceso</h5>
-                                
-                                <div class="form-floating mb-3">
-                                <input type="email" class="form-control email-sena" id="email" name="email"
-                                    title="Debe ser un correo @sena.edu.co, @soy.sena.edu.co o @gmail.com"
-                                    placeholder="usuario@sena.edu.co, usuario@soy.sena.edu.co o usuario@gmail.com"
-                                    required>
-                                <label for="email">Correo Institucional</label>
-                                <div class="form-text">Debe ser un correo @sena.edu.co, @soy.sena.edu.co o @gmail.com</div>
-                                <div class="invalid-feedback">El correo ingresado no es válido</div>
-                            </div>
 
                                 <div class="form-floating mb-3">
-                                    <input type="text" class="form-control" id="username" name="username" readonly>
+                                    <input type="email" class="form-control email-sena {% if form.email.errors %}is-invalid{% endif %}"
+                                        id="email" name="email"
+                                        value="{{ form.email.value|default:'' }}"
+                                        title="Debe ser un correo @sena.edu.co, @soy.sena.edu.co o @gmail.com"
+                                        placeholder="usuario@sena.edu.co"
+                                        autocomplete="off" data-lpignore="true"
+                                        required>
+                                    <label for="email">Correo Institucional</label>
+                                    <div class="form-text">Debe ser un correo @sena.edu.co, @soy.sena.edu.co o @gmail.com</div>
+                                    <div class="invalid-feedback">{% if form.email.errors %}{{ form.email.errors.0 }}{% else %}El correo debe ser @sena.edu.co, @soy.sena.edu.co o @gmail.com{% endif %}</div>
+                                </div>
+
+                                <div class="form-floating mb-3">
+                                    <input type="text" class="form-control" id="username" name="username" readonly
+                                           autocomplete="off">
                                     <label for="username">Nombre de Usuario</label>
-                                    <div class="form-text">Se generará automáticamente desde su email</div>
+                                    <div class="form-text">Se generará automáticamente desde su nombre</div>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-floating mb-3">
-                                            <input type="password" class="form-control" id="password1" name="password1" required>
+                                            <input type="password" class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
+                                                   id="password1" name="password1"
+                                                   autocomplete="new-password" data-lpignore="true" required>
                                             <label for="password1">Contraseña</label>
+                                            <div class="invalid-feedback">{% if form.password1.errors %}{{ form.password1.errors.0 }}{% else %}La contraseña es requerida{% endif %}</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating mb-3">
-                                            <input type="password" class="form-control" id="password2" name="password2" required>
+                                            <input type="password" class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
+                                                   id="password2" name="password2"
+                                                   autocomplete="new-password" data-lpignore="true" required>
                                             <label for="password2">Confirmar Contraseña</label>
+                                            <div class="invalid-feedback">{% if form.password2.errors %}{{ form.password2.errors.0 }}{% else %}Las contraseñas no coinciden{% endif %}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -438,20 +497,54 @@ function showStep(step) {
 
 function validateStep(step) {
     let valid = true;
+    let firstInvalidField = null;
     const $currentStep = $(`#step-${step}`);
-    
+
+    // Limpiar alertas anteriores
+    $('.login-form > .alert').remove();
+
     // Validar campos requeridos del paso actual
     $currentStep.find('input[required], select[required]').each(function() {
-        if (!$(this).val().trim()) {
-            $(this).addClass('is-invalid');
+        const $field = $(this);
+        if (!$field.val().trim()) {
+            $field.addClass('is-invalid');
             valid = false;
+            if (!firstInvalidField) firstInvalidField = $field;
         } else {
-            $(this).removeClass('is-invalid');
+            $field.removeClass('is-invalid');
         }
     });
-    
+
     // Validaciones específicas por paso
     switch(step) {
+        case 1:
+            // Validar nombre
+            const firstName = $('#first_name').val().trim();
+            if (firstName && firstName.length < 2) {
+                $('#first_name').addClass('is-invalid');
+                $('#first_name').siblings('.invalid-feedback').text('El nombre debe tener al menos 2 caracteres');
+                valid = false;
+                if (!firstInvalidField) firstInvalidField = $('#first_name');
+            }
+
+            // Validar apellido
+            const lastName = $('#last_name').val().trim();
+            if (lastName && lastName.length < 2) {
+                $('#last_name').addClass('is-invalid');
+                $('#last_name').siblings('.invalid-feedback').text('El apellido debe tener al menos 2 caracteres');
+                valid = false;
+                if (!firstInvalidField) firstInvalidField = $('#last_name');
+            }
+
+            // Validar teléfono si se ingresó
+            const telefono = $('#telefono').val().trim();
+            if (telefono && telefono.length !== 10) {
+                $('#telefono').addClass('is-invalid');
+                valid = false;
+                if (!firstInvalidField) firstInvalidField = $('#telefono');
+            }
+            break;
+
         case 2:
             const email = $('#email').val().trim().toLowerCase();
             const dominiosValidos = ['@sena.edu.co', '@soy.sena.edu.co', '@gmail.com'];
@@ -459,27 +552,59 @@ function validateStep(step) {
             // Validar dominio del correo
             if (!dominiosValidos.some(d => email.endsWith(d))) {
                 $('#email').addClass('is-invalid');
-                showAlert('El correo debe ser @sena.edu.co, @soy.sena.edu.co o @gmail.com', 'error');
                 valid = false;
+                if (!firstInvalidField) firstInvalidField = $('#email');
             } else {
                 $('#email').removeClass('is-invalid');
+            }
+
+            // Lista de contraseñas comunes
+            const passwordsComunes = [
+                '12345678', '123456789', '1234567890', 'password', 'password1',
+                '11111111', '00000000', 'qwerty123', 'abc12345', 'admin123'
+            ];
+
+            // Validar contraseña
+            const password1 = $('#password1').val();
+            let passwordError = '';
+
+            if (password1.length < 8) {
+                passwordError = 'La contraseña debe tener al menos 8 caracteres';
+            } else if (/^\d+$/.test(password1)) {
+                passwordError = 'La contraseña no puede ser completamente numérica';
+            } else if (passwordsComunes.includes(password1.toLowerCase())) {
+                passwordError = 'Esta contraseña es demasiado común';
+            }
+
+            if (passwordError) {
+                $('#password1').addClass('is-invalid');
+                $('#password1').siblings('.invalid-feedback').text(passwordError);
+                valid = false;
+                if (!firstInvalidField) firstInvalidField = $('#password1');
+            } else {
+                $('#password1').removeClass('is-invalid');
             }
 
             // Validar contraseñas coinciden
             if ($('#password1').val() !== $('#password2').val()) {
                 $('#password2').addClass('is-invalid');
-                showAlert('Las contraseñas no coinciden', 'error');
+                $('#password2').siblings('.invalid-feedback').text('Las contraseñas no coinciden');
                 valid = false;
-            } else {
+                if (!firstInvalidField) firstInvalidField = $('#password2');
+            } else if ($('#password2').val()) {
                 $('#password2').removeClass('is-invalid');
             }
-        break;
+            break;
     }
-    
-    if (!valid) {
-        showAlert('Por favor complete todos los campos requeridos', 'warning');
+
+    // Hacer scroll al primer campo con error y enfocarlo
+    if (!valid && firstInvalidField) {
+        firstInvalidField.focus();
+        $('html, body').animate({
+            scrollTop: firstInvalidField.offset().top - 100
+        }, 300);
     }
-    
+
     return valid;
 }
 
@@ -516,18 +641,85 @@ function generateConfirmation() {
 
 // Event listeners
 $(document).ready(function() {
-    // Auto-generar username desde nombre y apellido
-    $('#first_name, #last_name').on('input', function() {
+    // Detectar errores de Django y posicionar en el paso correcto
+    {% if form.errors %}
+        const djangoErrors = {
+            {% for field in form %}
+                {% if field.errors %}
+                '{{ field.name }}': '{{ field.errors.0|escapejs }}',
+                {% endif %}
+            {% endfor %}
+        };
+
+        // Determinar en qué paso está el primer error
+        const step1Fields = ['first_name', 'last_name', 'telefono'];
+        const step2Fields = ['email', 'username', 'password1', 'password2'];
+
+        let errorStep = 1;
+        for (const field of Object.keys(djangoErrors)) {
+            if (step2Fields.includes(field)) {
+                errorStep = 2;
+                break;
+            }
+        }
+
+        // Ir al paso con errores
+        setTimeout(function() {
+            showStep(errorStep);
+
+            // Marcar campos con errores como inválidos
+            for (const [field, error] of Object.entries(djangoErrors)) {
+                const $field = $(`#${field}`);
+                $field.addClass('is-invalid');
+
+                // Actualizar mensaje de error si existe
+                const $feedback = $field.siblings('.invalid-feedback');
+                if ($feedback.length) {
+                    $feedback.text(error);
+                }
+            }
+
+            // Scroll al primer error
+            const firstErrorField = Object.keys(djangoErrors)[0];
+            if (firstErrorField) {
+                $(`#${firstErrorField}`).focus();
+            }
+        }, 100);
+    {% endif %}
+
+    // Validación en tiempo real para todos los campos
+    $('input[required]').on('blur', function() {
+        const $field = $(this);
+        if (!$field.val().trim()) {
+            $field.addClass('is-invalid');
+        } else {
+            $field.removeClass('is-invalid');
+        }
+    });
+
+    // Función para generar username
+    function generarUsername() {
         const firstName = $('#first_name').val().trim().toLowerCase();
         const lastName = $('#last_name').val().trim().toLowerCase();
 
         if (firstName && lastName) {
-            // Limpiar acentos y caracteres especiales
-            const cleanName = firstName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '.');
-            const cleanLastName = lastName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '.');
-            const username = `${cleanName}.${cleanLastName}`;
+            const primerNombre = firstName.split(' ')[0];
+            const primerApellido = lastName.split(' ')[0];
+            const cleanName = primerNombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+            const cleanLastName = primerApellido.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+            const username = `${cleanName}${cleanLastName}`;
             $('#username').val(username);
         }
+    }
+
+    // Si hay valores previos (por error de formulario), regenerar username
+    if ($('#first_name').val() && $('#last_name').val()) {
+        generarUsername();
+    }
+
+    // Auto-generar username desde primer nombre y primer apellido (sin punto)
+    $('#first_name, #last_name').on('input', function() {
+        generarUsername();
     });
 
     // Validación de teléfono: solo números, máximo 10 dígitos
@@ -543,21 +735,73 @@ $(document).ready(function() {
         $(this).val(valor);
     });
 
+    // Validación en tiempo real del email
+    $('#email').on('input blur', function() {
+        const email = $(this).val().trim().toLowerCase();
+        const dominiosValidos = ['@sena.edu.co', '@soy.sena.edu.co', '@gmail.com'];
+
+        if (email.length > 0) {
+            if (dominiosValidos.some(d => email.endsWith(d))) {
+                $(this).removeClass('is-invalid').addClass('is-valid');
+            } else if (email.includes('@')) {
+                $(this).removeClass('is-valid').addClass('is-invalid');
+            }
+        } else {
+            $(this).removeClass('is-valid is-invalid');
+        }
+    });
+
+    // Lista de contraseñas comunes (Django las rechaza)
+    const contraseñasComunes = [
+        '12345678', '123456789', '1234567890', 'password', 'password1',
+        '11111111', '00000000', 'qwerty123', 'abc12345', 'admin123',
+        'letmein1', 'welcome1', 'monkey12', 'dragon12', 'master12',
+        'qwertyui', 'asdfghjk', 'zxcvbnm1', 'football', 'baseball',
+        'iloveyou', 'trustno1', 'sunshine', 'princess', 'administrator'
+    ];
+
     // Validación de fortaleza de contraseña
     $('#password1').on('input', function() {
         const password = $(this).val();
+        const $field = $(this);
+        const $feedback = $field.siblings('.invalid-feedback');
+
         updatePasswordStrength(password);
+
+        // Validaciones
+        let errorMsg = '';
+
+        if (password.length > 0 && password.length < 8) {
+            errorMsg = 'La contraseña debe tener al menos 8 caracteres';
+        } else if (/^\d+$/.test(password)) {
+            errorMsg = 'La contraseña no puede ser completamente numérica';
+        } else if (contraseñasComunes.includes(password.toLowerCase())) {
+            errorMsg = 'Esta contraseña es demasiado común';
+        }
+
+        if (errorMsg) {
+            $field.addClass('is-invalid').removeClass('is-valid');
+            $feedback.text(errorMsg);
+        } else if (password.length >= 8) {
+            $field.removeClass('is-invalid').addClass('is-valid');
+        }
+
+        // Re-validar confirmación si ya tiene valor
+        if ($('#password2').val()) {
+            $('#password2').trigger('input');
+        }
     });
-    
+
     // Validación de confirmación de contraseña
     $('#password2').on('input', function() {
         const password1 = $('#password1').val();
         const password2 = $(this).val();
-        
+
         if (password2 && password1 !== password2) {
             $(this).addClass('is-invalid');
-        } else {
-            $(this).removeClass('is-invalid');
+            $(this).siblings('.invalid-feedback').text('Las contraseñas no coinciden');
+        } else if (password2) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
         }
     });
     

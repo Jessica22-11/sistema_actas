@@ -1,11 +1,60 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 from datetime import timedelta, datetime, date
 import uuid
 import os
 from django.conf import settings
 from accounts.models import User
+
+
+# =============================================================================
+# VALIDADORES DE ARCHIVOS
+# =============================================================================
+
+# Extensiones permitidas para archivos adjuntos (whitelist)
+ALLOWED_FILE_EXTENSIONS = [
+    # Documentos
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
+    # Imágenes
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
+    # Comprimidos
+    'zip', 'rar', '7z',
+    # Texto
+    'txt', 'csv', 'rtf',
+]
+
+# Tamaño máximo de archivo en bytes (10 MB)
+MAX_FILE_SIZE = 10 * 1024 * 1024
+
+
+def validar_extension_archivo(archivo):
+    """
+    Valida que el archivo tenga una extensión permitida.
+    """
+    if archivo:
+        nombre = archivo.name.lower()
+        extension = nombre.rsplit('.', 1)[-1] if '.' in nombre else ''
+
+        if extension not in ALLOWED_FILE_EXTENSIONS:
+            raise ValidationError(
+                f'Tipo de archivo no permitido: .{extension}. '
+                f'Extensiones permitidas: {", ".join(ALLOWED_FILE_EXTENSIONS)}'
+            )
+
+
+def validar_tamaño_archivo(archivo):
+    """
+    Valida que el archivo no exceda el tamaño máximo permitido.
+    """
+    if archivo and archivo.size > MAX_FILE_SIZE:
+        max_mb = MAX_FILE_SIZE / (1024 * 1024)
+        actual_mb = archivo.size / (1024 * 1024)
+        raise ValidationError(
+            f'El archivo es demasiado grande ({actual_mb:.2f} MB). '
+            f'Tamaño máximo permitido: {max_mb:.0f} MB'
+        )
 
 User = get_user_model()
 
@@ -58,7 +107,12 @@ class Acta(models.Model):
     aplicar_silencio_dias = models.IntegerField(default=7)
     
     # Archivos adjuntos
-    archivo_adjunto = models.FileField(upload_to='actas/adjuntos/', blank=True, null=True)
+    archivo_adjunto = models.FileField(
+        upload_to='actas/adjuntos/',
+        blank=True,
+        null=True,
+        validators=[validar_extension_archivo, validar_tamaño_archivo]
+    )
     
     # ========================================
     # CAMPOS NUEVOS PARA OLLAMA/IA
@@ -131,27 +185,49 @@ class Acta(models.Model):
         ]
     
     def save(self, *args, **kwargs):
-        # Generar número de acta si no existe
+        # Generar número de acta si no existe (con protección contra race condition)
         if not self.numero_acta:
-            year = timezone.now().year
-            count = Acta.objects.filter(fecha_creacion__year=year).count() + 1
-            self.numero_acta = f"ACT-{year}-{count:03d}"
-        
-        # Establecer fecha límite de firmas
+            with transaction.atomic():
+                year = timezone.now().year
+                # Usar select_for_update para bloquear la tabla durante la consulta
+                # y MAX para obtener el último número de forma segura
+                from django.db.models import Max
+                ultimo_numero = Acta.objects.filter(
+                    fecha_creacion__year=year
+                ).aggregate(Max('id'))['id__max']
+
+                count = 1
+                if ultimo_numero:
+                    # Obtener el último número de acta del año
+                    ultima_acta = Acta.objects.filter(fecha_creacion__year=year).order_by('-numero_acta').first()
+                    if ultima_acta and ultima_acta.numero_acta:
+                        try:
+                            # Extraer el número del formato ACT-YYYY-XXX
+                            ultimo_num = int(ultima_acta.numero_acta.split('-')[-1])
+                            count = ultimo_num + 1
+                        except (ValueError, IndexError):
+                            count = Acta.objects.filter(fecha_creacion__year=year).count() + 1
+
+                self.numero_acta = f"ACT-{year}-{count:04d}"
+
+        # Establecer fecha límite de firmas (7 días en producción)
         if not self.fecha_limite_firmas and self.estado == 'en_revision':
-            self.fecha_limite_firmas = timezone.now() + timedelta(minutes=2)  # 2 minutos para pruebas
-        
+            self.fecha_limite_firmas = timezone.now() + timedelta(days=7)
+
         # Detectar si fue editada después de generar con IA
         if self.pk and self.generada_con_ia:
             # Si el acta ya existe y fue generada con IA
-            acta_anterior = Acta.objects.get(pk=self.pk)
-            if (acta_anterior.desarrollo != self.desarrollo or 
-                acta_anterior.orden_dia != self.orden_dia):
-                # Si cambió el contenido, marcar como editada
-                self.editada_despues_ia = True
-                self.fecha_ultima_edicion_manual = timezone.now()
-                self.version += 1
-        
+            try:
+                acta_anterior = Acta.objects.get(pk=self.pk)
+                if (acta_anterior.desarrollo != self.desarrollo or
+                    acta_anterior.orden_dia != self.orden_dia):
+                    # Si cambió el contenido, marcar como editada
+                    self.editada_despues_ia = True
+                    self.fecha_ultima_edicion_manual = timezone.now()
+                    self.version += 1
+            except Acta.DoesNotExist:
+                pass
+
         super().save(*args, **kwargs)
     
     def get_participantes(self):
@@ -368,7 +444,8 @@ class ArchivoAdjunto(models.Model):
 
     archivo = models.FileField(
         upload_to='actas/adjuntos/%Y/%m/',
-        help_text='Archivo adjunto'
+        help_text='Archivo adjunto',
+        validators=[validar_extension_archivo, validar_tamaño_archivo]
     )
 
     nombre_original = models.CharField(

@@ -42,23 +42,25 @@ def register_view(request):
             if firma:
                 user.firma_digital = firma
 
-            # ✅ Generar username único basado en nombre y apellido
-            # Formato: nombre.apellido (sin espacios, en minúsculas, sin acentos)
+            # ✅ Generar username único basado en primer nombre y primer apellido
+            # Formato: nombreapellido (sin espacios, sin punto, en minúsculas, sin acentos)
             import unicodedata
 
             def limpiar_texto(texto):
-                """Elimina acentos y convierte a minúsculas"""
+                """Elimina acentos, convierte a minúsculas y toma solo la primera palabra"""
                 texto = texto.lower().strip()
+                # Tomar solo la primera palabra (primer nombre o primer apellido)
+                primera_palabra = texto.split()[0] if texto.split() else texto
                 # Eliminar acentos
-                texto = ''.join(c for c in unicodedata.normalize('NFD', texto)
+                primera_palabra = ''.join(c for c in unicodedata.normalize('NFD', primera_palabra)
                                if unicodedata.category(c) != 'Mn')
-                # Reemplazar espacios por punto
-                texto = texto.replace(' ', '.')
-                return texto
+                # Eliminar caracteres especiales (solo letras)
+                primera_palabra = ''.join(c for c in primera_palabra if c.isalpha())
+                return primera_palabra
 
-            nombre_limpio = limpiar_texto(user.first_name)
-            apellido_limpio = limpiar_texto(user.last_name)
-            base_username = f"{nombre_limpio}.{apellido_limpio}"
+            primer_nombre = limpiar_texto(user.first_name)
+            primer_apellido = limpiar_texto(user.last_name)
+            base_username = f"{primer_nombre}{primer_apellido}"
 
             # Asegurar unicidad del username
             username = base_username
@@ -262,7 +264,15 @@ def usuarios(request):
     
     return render(request, "accounts/usuarios.html", context)
 
+
+@login_required
 def editar_usuario(request, user_id):
+    """Editar usuario - requiere autenticación y permisos de admin/coordinador"""
+    # Verificar permisos: solo admin, coordinador o director pueden editar usuarios
+    if request.user.rol not in ['admin', 'coordinador', 'director']:
+        messages.error(request, 'No tienes permisos para editar usuarios.')
+        return redirect('accounts:usuarios')
+
     usuario = get_object_or_404(User, id=user_id)
 
     if request.method == 'POST':

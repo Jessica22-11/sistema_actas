@@ -7,9 +7,6 @@ venv/
 # Ignorar backups locales
 sistema_actas/backups/*.zip
 
-# desde la raíz del repo
-echo "sistema_actas/backups/*.zip" >> .gitignore
-
 # Archivos compilados
 __pycache__/
 *.pyc
@@ -276,6 +273,15 @@ SOLUCION_FLUTTER.md
 test_envio_email_real.py
 VERIFICACION_SISTEMA_EMAIL_COMPLETA.md
 verificar_sistema_emails.py
+CORRECCION_LISTADO_ACTAS.md
+CORRECCION_ROLES_EMAIL.md
+CORRECCIONES_SEGURIDAD.md
+PERMISOS_CREAR_ACTA.md
+PROMPT_CORTO_FLUTTER.txt
 
-*.txt
+# Archivos temporales de texto (excepto requirements.txt y runtime.txt)
 tmpclaude-*
+
+# NO ignorar archivos importantes
+!requirements.txt
+!runtime.txt

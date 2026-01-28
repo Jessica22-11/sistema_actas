@@ -1,36 +1,40 @@
 import os
+from datetime import timedelta, datetime
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.http import require_POST
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.utils import timezone
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib import colors
-from datetime import timedelta 
-from datetime import datetime
 from django.conf import settings
 from django.core.management import call_command
-from django.http import FileResponse
-from reportlab.platypus import Image
-from reportlab.lib.units import inch
 
+# ReportLab para generación de PDFs
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+
+# Modelos y utilidades locales
 from .models import Acta, Participante, Firma, Compromiso, ComentarioActa
+from .utils import sanitizar_html, sanitizar_texto_plano
+from .forms import ReporteCompromisoForm
 from core.utils import generar_acta_con_ia, enviar_notificacion_participantes
 from notifications.models import Notification
 from accounts.models import User
-from .forms import ReporteCompromisoForm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # Create your views here.
 @login_required
 def detalle_acta(request, acta_id):
+    # Bloquear acceso a invitados
+    if request.user.rol == 'invitado':
+        messages.error(request, "Tu cuenta de invitado no tiene acceso a esta sección.")
+        return redirect("core:dashboard")
+
     acta = get_object_or_404(Acta, id=acta_id)
 
     # Verificar permisos
@@ -95,6 +99,11 @@ def detalle_acta(request, acta_id):
 
 @login_required
 def editar_acta(request, acta_id):
+    # Bloquear acceso a invitados y aprendices
+    if request.user.rol in ['invitado', 'aprendiz']:
+        messages.error(request, "No tienes permisos para editar actas.")
+        return redirect("core:dashboard")
+
     acta = get_object_or_404(Acta, id=acta_id, creador=request.user)
     if acta.estado != "borrador":
         messages.error(request, "Solo se pueden editar actas en estado de borrador.")
@@ -511,7 +520,8 @@ def generar_pdf(request, acta_id):
     # ==========================================
     # AGENDA O PUNTOS PARA DESARROLLAR
     # ==========================================
-    agenda_content = acta.orden_dia if acta.orden_dia else "No especificada"
+    # Sanitizar contenido para prevenir XSS
+    agenda_content = sanitizar_texto_plano(acta.orden_dia) if acta.orden_dia else "No especificada"
     agenda_table = Table(
         [
             [Paragraph("<b>AGENDA O PUNTOS PARA DESARROLLAR:</b>", styles['Normal'])],
@@ -533,11 +543,11 @@ def generar_pdf(request, acta_id):
     objetivo = f"Reunión de tipo {acta.get_tipo_reunion_display()}"
     if acta.generada_con_ia:
         objetivo += " (Generada con IA)"
-    
+
     objetivo_table = Table(
         [
             [Paragraph("<b>OBJETIVO(S) DE LA REUNIÓN:</b>", styles['Normal'])],
-            [Paragraph(objetivo, styles['Normal'])]
+            [Paragraph(sanitizar_texto_plano(objetivo), styles['Normal'])]
         ],
         colWidths=[7*inch]
     )
@@ -551,7 +561,8 @@ def generar_pdf(request, acta_id):
     # ==========================================
     # DESARROLLO DE LA REUNIÓN
     # ==========================================
-    desarrollo_content = acta.desarrollo if acta.desarrollo else "No especificado"
+    # Sanitizar contenido para prevenir XSS
+    desarrollo_content = sanitizar_texto_plano(acta.desarrollo) if acta.desarrollo else "No especificado"
     desarrollo_table = Table(
         [
             [Paragraph("<b>DESARROLLO DE LA REUNIÓN</b>", styles['Normal'])],
@@ -712,6 +723,11 @@ def generar_pdf(request, acta_id):
 
 @login_required
 def actas_list(request):
+    # Bloquear acceso a invitados
+    if request.user.rol == 'invitado':
+        messages.error(request, "Tu cuenta de invitado no tiene acceso a esta sección. Registra una cuenta con correo institucional para acceder.")
+        return redirect("core:dashboard")
+
     # Filtros
     estado = request.GET.get('estado')
     tipo = request.GET.get('tipo')
@@ -769,6 +785,10 @@ def actas_list(request):
 
 @login_required
 def crear_acta(request):
+    # Bloquear acceso a invitados y aprendices
+    if request.user.rol == 'invitado':
+        messages.error(request, "Tu cuenta de invitado no tiene acceso a esta sección.")
+        return redirect("core:dashboard")
 
     if request.user.rol == 'aprendiz':
         messages.error(request, "No tienes permisos para crear actas.")
@@ -986,6 +1006,11 @@ def archivar_acta(request, acta_id):
 # ✍️ Firmas pendientes (solo las del usuario autenticado)
 @login_required
 def firmas_pendientes(request):
+    # Bloquear acceso a invitados
+    if request.user.rol == 'invitado':
+        messages.error(request, "Tu cuenta de invitado no tiene acceso a esta sección.")
+        return redirect("core:dashboard")
+
     firmas = Firma.objects.filter(usuario=request.user, firmado=False, acta__estado="en_revision")
 
     return render(request, "actas/firmas_pendientes.html", {
@@ -1058,6 +1083,11 @@ def eliminar_compromiso(request, compromiso_id):
 
 @login_required
 def mis_compromisos(request):
+    # Bloquear acceso a invitados
+    if request.user.rol == 'invitado':
+        messages.error(request, "Tu cuenta de invitado no tiene acceso a esta sección.")
+        return redirect("core:dashboard")
+
     compromisos = Compromiso.objects.filter(responsable=request.user).order_by('-fecha_limite')
     return render(request, "actas/mis_compromisos.html", {"compromisos": compromisos})
 

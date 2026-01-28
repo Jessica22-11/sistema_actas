@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 import logging
 import re
 from datetime import datetime
@@ -13,16 +13,48 @@ class SecurityMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
-        # Patrones de ataques comunes
+        # Patrones de ataques comunes (mejorados)
         self.attack_patterns = [
+            # XSS
             r'<script.*?>.*?</script>',
-            r'union.*select',
             r'javascript:',
             r'vbscript:',
-            r'onload=',
-            r'onerror=',
+            r'onload\s*=',
+            r'onerror\s*=',
+            r'onclick\s*=',
+            r'onmouseover\s*=',
+            r'onfocus\s*=',
+            r'onblur\s*=',
+            r'expression\s*\(',
+            # SQL Injection
+            r'union\s+select',
+            r';\s*drop\s+',
+            r';\s*delete\s+',
+            r';\s*insert\s+',
+            r';\s*update\s+',
+            r'--\s*$',
+            r'/\*.*\*/',
+            # Code Injection
             r'eval\s*\(',
             r'exec\s*\(',
+            r'system\s*\(',
+            r'passthru\s*\(',
+            r'shell_exec\s*\(',
+            # Path Traversal
+            r'\.\./\.\.',
+            r'\.\.\\\\',
+            # LDAP Injection
+            r'\)\s*\(\|',
+            r'\)\s*\(\&',
+        ]
+
+        # Rutas de autenticación (rate limiting más estricto)
+        self.auth_paths = [
+            '/actas/api/auth/login/',
+            '/actas/api/auth/register/',
+            '/actas/api/auth/verificar-codigo/',
+            '/actas/api/auth/reenviar-codigo/',
+            '/accounts/password_reset/',
         ]
 
     def __call__(self, request):
@@ -39,7 +71,13 @@ class SecurityMiddleware:
 
         # Verificar rate limiting
         if self.is_rate_limited(request):
-            logger.warning(f"Rate limit exceeded for IP: {self.get_client_ip(request)}")
+            # Devolver JSON para APIs, HTML para otras rutas
+            if '/api/' in request.path:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Demasiadas solicitudes. Intenta de nuevo en un momento.',
+                    'codigo_error': 'RATE_LIMIT_EXCEEDED'
+                }, status=429)
             return HttpResponseForbidden("Rate limit exceeded")
 
         response = self.get_response(request)
@@ -106,19 +144,43 @@ class SecurityMiddleware:
         cache.set(f"blocked_ip_{ip}", True, duration)
 
     def is_rate_limited(self, request):
-        """Verificar rate limiting"""
+        """
+        Verificar rate limiting con límites diferenciados:
+        - APIs de autenticación: 10 requests por minuto (prevenir brute force)
+        - APIs generales: 60 requests por minuto
+        - Otras rutas: 100 requests por minuto
+        """
         ip = self.get_client_ip(request)
-        key = f"rate_limit_{ip}"
+        path = request.path
+
+        # Rate limiting más estricto para rutas de autenticación
+        if any(path.startswith(auth_path) for auth_path in self.auth_paths):
+            key = f"rate_limit_auth_{ip}"
+            limit = 10  # Solo 10 intentos por minuto para auth
+            window = 60
+        # Rate limiting para APIs
+        elif '/api/' in path:
+            key = f"rate_limit_api_{ip}"
+            limit = 60  # 60 requests por minuto para APIs
+            window = 60
+        else:
+            key = f"rate_limit_{ip}"
+            limit = 100  # 100 requests por minuto para otras rutas
+            window = 60
 
         # Obtener contador actual
         requests = cache.get(key, 0)
 
-        # Límite: 100 requests por minuto
-        if requests >= 100:
+        if requests >= limit:
+            # Logging del rate limit
+            logger.warning(
+                f"Rate limit exceeded: IP={ip}, path={path}, "
+                f"requests={requests}, limit={limit}"
+            )
             return True
 
         # Incrementar contador
-        cache.set(key, requests + 1, 60)  # 60 segundos
+        cache.set(key, requests + 1, window)
         return False
 
 

@@ -75,6 +75,11 @@ html, body {
     box-shadow: 0 0 0 0.2rem rgba(57, 169, 0, 0.25);
 }
 
+.code-input.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
 .btn-verify {
     background: var(--sena-green);
     color: white;
@@ -124,6 +129,17 @@ html, body {
         </div>
 
         <div class="verify-body">
+            <!-- Mensajes de error/éxito -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
             <div class="info-box">
                 <i class="fas fa-info-circle me-2"></i>
                 <strong>Revisa tu correo:</strong> {{ email }}
@@ -194,13 +210,26 @@ document.getElementById('codigo').addEventListener('input', function(e) {
     // Solo permitir números
     this.value = this.value.replace(/[^0-9]/g, '');
 
+    // Quitar clase de error al escribir
+    this.classList.remove('is-invalid');
+
     // Auto-submit cuando llega a 6 dígitos
     if (this.value.length === 6) {
-        // Opcional: esperar 500ms antes de enviar
+        // Mostrar indicador de carga
+        const btn = document.querySelector('.btn-verify');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verificando...';
+        btn.disabled = true;
+
+        // Esperar 500ms antes de enviar
         setTimeout(() => {
             this.form.submit();
         }, 500);
     }
 });
+
+// Si hay mensajes de error, marcar el campo como inválido
+{% if messages %}
+    document.getElementById('codigo').classList.add('is-invalid');
+{% endif %}
 </script>
 {% endblock %}

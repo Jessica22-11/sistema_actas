@@ -14,6 +14,7 @@ import os  # Modulo para interpretar el sistema operativo
 from decouple import config  # Permite manejar variables de entorno desde .env
 from pathlib import Path  # Para manejanvr rutas del sistema de forma segura
 from dotenv import load_dotenv  # Cargar variables de entorno desde .env
+import dj_database_url  # Para parsear DATABASE_URL de Railway/Heroku
 
 load_dotenv()
 
@@ -37,7 +38,29 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-producti
 # Modo de depuarcion, True en desarrollo,False en produccion
 DEBUG = config("DEBUG", default=True, cast=bool)
 # Lista de hosts permitidos para acceder al proyecto
-ALLOWED_HOSTS = ['*']
+# En producción, especificar dominios exactos separados por coma en .env
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+
+# En modo DEBUG, agregar dominios de ngrok automáticamente
+if DEBUG:
+    ALLOWED_HOSTS += [
+        '.ngrok.io',
+        '.ngrok-free.app',
+        '.ngrok.app',
+        '.ngrok-free.dev',
+        '.localhost',
+        '127.0.0.1',
+    ]
+
+# Railway y otros servicios de hosting
+ALLOWED_HOSTS += [
+    '.railway.app',
+    '.up.railway.app',
+]
+
+# Si hay RAILWAY_STATIC_URL, estamos en Railway
+if os.environ.get('RAILWAY_STATIC_URL'):
+    ALLOWED_HOSTS.append(os.environ.get('RAILWAY_STATIC_URL', '').replace('https://', '').replace('http://', '').split('/')[0])
 
 
 # Application definition
@@ -78,8 +101,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",  # Protección contra Clickjacking
-    #"sistema_actas.security.SecurityMiddleware",
-    #"sistema_actas.security.AuditLogMiddleware",
+    "sistema_actas.security.SecurityMiddleware",  # Seguridad personalizada (XSS, SQLi detection)
+    "sistema_actas.security.AuditLogMiddleware",  # Auditoría de acciones
 ]
 
 ROOT_URLCONF = "sistema_actas.urls"
@@ -107,6 +130,7 @@ WSGI_APPLICATION = "sistema_actas.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Configuración por defecto (desarrollo local con SQLite)
 DATABASES = {
     "default": {
         "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
@@ -117,6 +141,15 @@ DATABASES = {
         "PORT": config("DB_PORT", default=""),
     }
 }
+
+# Si existe DATABASE_URL (Railway, Heroku, etc.), usarla
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    DATABASES['default'] = dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 
 
 # Password validation
@@ -192,9 +225,10 @@ CKEDITOR_CONFIGS = {
 }
 
 # Celery + Redis (tareas asincronas)
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://172.25.59.213:6379/0")
+# En producción, configurar Redis con autenticación en .env
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = config(
-    "CELERY_RESULT_BACKEND", default="redis://172.25.59.213:6379/0"
+    "CELERY_RESULT_BACKEND", default="redis://localhost:6379/0"
 )
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
@@ -226,13 +260,20 @@ CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = [
-    "https://localhost:8000", 
+    "https://localhost:8000",
     "http://127.0.0.1:8000",
     "https://*.ngrok.io",           # URLs antiguas de ngrok
     "https://*.ngrok-free.app",     # URLs nuevas de ngrok (desde 2023)
-    "https://*.ngrok.app", 
-    "https://*.ngrok-free.dev"# Variante adicional
+    "https://*.ngrok.app",
+    "https://*.ngrok-free.dev",     # Variante adicional
+    "https://*.railway.app",        # Railway
+    "https://*.up.railway.app",     # Railway (variante)
 ]
+
+# Agregar dominio personalizado de Railway si existe
+RAILWAY_PUBLIC_DOMAIN = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if RAILWAY_PUBLIC_DOMAIN:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RAILWAY_PUBLIC_DOMAIN}')
 
 
 # Logging
@@ -305,6 +346,9 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"  # Después de logout vuelve al login
 PASSWORD_RESET_TIMEOUT = 3600
 PASSWORD_RESET_COMPLETE_URL = "/accounts/login/"
 
+# Token de API - expiración en horas (24 horas por defecto)
+TOKEN_EXPIRATION_HOURS = config('TOKEN_EXPIRATION_HOURS', default=24, cast=int)
+
 
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-responder@sena.edu.co")
 
@@ -326,7 +370,12 @@ IA_DAILY_LIMIT_PER_USER = config("IA_DAILY_LIMIT_PER_USER", default=50, cast=int
 # ==============================================
 # CORS Configuration (para app móvil)
 # ==============================================
-CORS_ALLOW_ALL_ORIGINS = True  # Solo para desarrollo
+# En producción, usar CORS_ALLOWED_ORIGINS con dominios específicos
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL', default=False, cast=bool)
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000'
+).split(',')
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = [
     'Content-Disposition',
